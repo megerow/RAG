@@ -1,4 +1,5 @@
 ﻿using OpenAI = RAG.OpenAI;
+using DataStax = RAG.DataStax;
 using Newtonsoft.Json;
 
 // See https://aka.ms/new-console-template for more information
