@@ -10,23 +10,42 @@ namespace RAG.OpenAI
 {
     public class Embedder
     {
-        public Embedder(string input)
-        {
-            this.input = input;
-        }
-
+        // If empty constructor is used then the input text
+        // must be set separately before the EmbedAsync method is called
         public Embedder() { }
 
+        // Prefill the input text
+        public Embedder(string text)
+        {
+            this.text = text;
+        }
+
+        // Url to the OpenAI embedding service
         public string embeddingsUrl { get; } = "https://api.openai.com/v1/embeddings";
+
+        // The embedding model to use
         public string model { get; } = "text-embedding-ada-002";
-        public string input { get; set; } = "";
+
+        // Text to convert to an embedding
+        public string text { get; set; } = "";
+
+        // Holds JSON string returned from API
         private string _toString { get; set; } = "";
         
-        public string ToString() { return _toString; }
+        // Override the native ToString method to return JSON of response
+        public override string ToString() { return _toString; }
 
+        // Object to hold the response from OpenAI API
         public EmbeddingResult Result { get; set; }
 
-        public async Task<EmbeddingResult> EmbedAsync(string text) 
+        // If called without parameters, then just use the text property
+        public async Task<EmbeddingResult> EmbedAsync()
+        {
+            return await EmbedAsync(text);
+        }
+
+        // Otherwise use the provided text
+        public async Task<EmbeddingResult> EmbedAsync(string _text) 
         {
             // Define HTTP client to call OpenAI embeddings API
             var client = new HttpClient();
@@ -34,7 +53,7 @@ namespace RAG.OpenAI
             request.Headers.Add("Authorization", "Bearer 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");
 
             // Set the model and the contents
-            var content = new StringContent("{\"model\": \"" + model + "\",\"input\": \"" + text + "\"}", null, "application/json");
+            var content = new StringContent("{\"model\": \"" + model + "\",\"input\": \"" + _text + "\"}", null, "application/json");
             request.Content = content;
 
             // Call the API and return the result
