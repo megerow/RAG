@@ -13,6 +13,9 @@ OpenAI.EmbeddingResult er = await e.EmbedAsync("**Scooby Snack Solutions**: This
 Console.WriteLine(e.ToString());
 
 // Save the embedding, along with metadata to the Datastax vector database
+DataStax.Writer writer = new DataStax.Writer();
+await writer.CreateCollectionAsync("customer");
+await writer.WriteAsync("customer", "1", "Scooby Snack Solutions", er.data[0].embedding);
 
 // Query the Datastax vector database
 
