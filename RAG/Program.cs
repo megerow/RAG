@@ -16,7 +16,7 @@ bool collectionExists = false;
 // Writer object will save all the profiles to the vector store
 OpenAI.Embedder e = new OpenAI.Embedder();
 OpenAI.EmbeddingResult er = new OpenAI.EmbeddingResult();
-DataStax.Writer writer = new DataStax.Writer();
+DataStax.API dsAPI = new DataStax.API();
 DataStax.Customers customers = new DataStax.Customers();
 
 // Get vector for the question we want to ask
@@ -24,6 +24,17 @@ DataStax.Customers customers = new DataStax.Customers();
 //er = await e.EmbedAsync("Do any businesses operate in Bedrock?");
 er = await e.EmbedAsync("Who can help me get stronger?");
 string json = JsonConvert.SerializeObject(er.data[0].embedding);
+Console.WriteLine("\nQuestion: Who can help me get stronger?");
+
+FindRequest fr = new FindRequest();
+fr.find.sort.vector = er.data[0].embedding;
+FindResult fres = await dsAPI.FindAsync(fr);
+
+Console.WriteLine($"\nResult: Company: {fres.data.documents[0].company}, Id: {fres.data.documents[0]._id}, Similarity: {fres.data.documents[0].similarity}");
+
+// Get the document based on it's ID
+string profileText = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\Customers\\" + fres.data.documents[0]._id + ".txt");
+Console.WriteLine("\nProfile:\n"+profileText);
 
 return;
 
@@ -57,7 +68,7 @@ foreach (string profile in customerProfiles)
     {
         try
         {
-            await writer.CreateCollectionAsync(collectionName);
+            await dsAPI.CreateCollectionAsync(collectionName);
             collectionExists = true;
         }
         catch { }
@@ -73,7 +84,7 @@ foreach (string profile in customerProfiles)
 }
 
 // Add the embedding to the collection
-await writer.WriteAsync(collectionName, customers);
+await dsAPI.WriteAsync(collectionName, customers);
 
 // Create a prompt for OpenAI ChatGPT to respond to
 
