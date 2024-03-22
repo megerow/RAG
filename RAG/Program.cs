@@ -3,6 +3,7 @@ using DataStax = RAG.DataStax;
 using Newtonsoft.Json;
 using RAG.DataStax;
 using static System.Net.Mime.MediaTypeNames;
+using RAG.OpenAI;
 
 // See https://aka.ms/new-console-template for more information
 Console.WriteLine("Retrieval Augmented Generation (RAG) Prototype");
@@ -14,17 +15,19 @@ string collectionName = "customer";
 bool collectionExists = false;
 
 // Writer object will save all the profiles to the vector store
-OpenAI.Embedder e = new OpenAI.Embedder();
+OpenAI.API openAiAPI = new OpenAI.API();
 OpenAI.EmbeddingResult er = new OpenAI.EmbeddingResult();
 DataStax.API dsAPI = new DataStax.API();
 DataStax.Customers customers = new DataStax.Customers();
 
+//string question = "What does Minni do?";
+string question = "Do any businesses operate in Bedrock?";
+//string question = "Who can help me get stronger?";
+
 // Get vector for the question we want to ask
-//er = await e.EmbedAsync("What does Minni do?");
-//er = await e.EmbedAsync("Do any businesses operate in Bedrock?");
-er = await e.EmbedAsync("Who can help me get stronger?");
+er = await openAiAPI.EmbedAsync(question);
 string json = JsonConvert.SerializeObject(er.data[0].embedding);
-Console.WriteLine("\nQuestion: Who can help me get stronger?");
+Console.WriteLine("\nQuestion: "+question);
 
 FindRequest fr = new FindRequest();
 fr.find.sort.vector = er.data[0].embedding;
@@ -35,6 +38,13 @@ Console.WriteLine($"\nResult: Company: {fres.data.documents[0].company}, Id: {fr
 // Get the document based on it's ID
 string profileText = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\Customers\\" + fres.data.documents[0]._id + ".txt");
 Console.WriteLine("\nProfile:\n"+profileText);
+
+// Get the ChatGPT response using this customer profile
+ChatRequest cr = new OpenAI.ChatRequest();
+cr.messages.Add(new ChatRequestMessage());
+cr.messages[0].content = $"Answer the following question: \"{question}\" using only the following data: \"{profileText}\"";
+string answer = openAiAPI.Chat(cr).Result.choices[0].message.content;
+Console.WriteLine("\nAnswer: " + answer);
 
 return;
 
@@ -52,7 +62,7 @@ foreach (string profile in customerProfiles)
     {
         try
         {
-            er = await e.EmbedAsync(text);
+            er = await openAiAPI.EmbedAsync(text);
             break;
         }
         catch (Exception ex)
@@ -62,7 +72,7 @@ foreach (string profile in customerProfiles)
     }
 
     // Display the returned json
-    Console.WriteLine(e.ToString());
+    Console.WriteLine(openAiAPI.ToString());
 
     if (!collectionExists)
     {
