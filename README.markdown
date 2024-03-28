@@ -1,4 +1,4 @@
-```
+```mermaid
 flowchart TD
     1(["1. Seeker asks <br>a question <span style="color: red; font-style: bold;">Q</span>"]) --> 2("2. Question <span style="color: red; font-style: bold;">Q</span> is <br>converted to embedding")
     2 --> 3[("3. Search vector database for <br>most appropriate data source: <span style="color: red; font-style: bold;">DS</span>, <br>to answer question: <span style="color: red; font-style: bold;">Q</span>")]
