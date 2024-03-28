@@ -43,8 +43,17 @@ namespace RAG.Utilities
                 fr.find.sort.vector = embeddingResponse.data[0].embedding;
                 FindResult fres = await dsAPI.FindAsync(collectionName, fr);
 
-                // Get the document based on it's ID
-                string profileText = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\Customers\\" + fres.data.documents[0]._id + ".txt");
+                // Get the best matching document type based on it's ID
+                string profileText = File.ReadAllText($"C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\{fres.data.documents[0].docType}\\" + fres.data.documents[0]._id.Split('.').Last() + ".txt");
+                Console.WriteLine($"doctype: {profileText}");
+
+                // Use the previous query to lookup the data in the correct collection
+                string docType = profileText.Split('|').First().ToLower();
+                fr = new FindRequest();
+                fr.find.sort.vector = embeddingResponse.data[0].embedding;
+                fres = await dsAPI.FindAsync(docType, fr);
+                profileText = File.ReadAllText($"C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\{docType}\\" + fres.data.documents[0]._id.Split('.').Last() + ".txt");
+                Console.WriteLine($"{docType}: {profileText}");
 
                 // Get the ChatGPT response using this customer profile
                 ChatRequest cr = new OpenAI.ChatRequest();
@@ -59,25 +68,25 @@ namespace RAG.Utilities
 
         }
 
-        public static async Task LoaderAsync(string collectionName)
+        public static async Task LoaderAsync(string collectionName, string docType)
         {
             OpenAI.API openAiAPI = new OpenAI.API();
             OpenAI.EmbeddingResult er = new OpenAI.EmbeddingResult();
             DataStax.API dsAPI = new DataStax.API();
-            DataStax.Customers customers = new DataStax.Customers();
+            DataStax.Documents documents = new DataStax.Documents();
 
             // Get files containing customer profiles
-            string[] customerProfiles = Directory.GetFiles("C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\Customers\\");
+            string[] profiles = Directory.GetFiles($"C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\{docType}\\");
 
             bool collectionExists = false;
 
             // Loop through files
-            foreach (string profile in customerProfiles)
+            foreach (string profile in profiles)
             {
                 Console.WriteLine(profile);
                 string id = profile.Split('\\').Last().Split('.')[0];
                 string contents = File.ReadAllText(profile);
-                string company = contents.Split('|').First();
+                string name = contents.Split('|').First();
                 string text = contents.Split('|').Last();
 
                 // Get embedding for content
@@ -90,7 +99,10 @@ namespace RAG.Utilities
                     }
                     catch (Exception ex)
                     {
-                        Thread.Sleep(10000);
+                        Thread.Sleep(60000*(i+1));
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{ex.Message}, try again in {Convert.ToInt32(60*(i+1))} seconds");
+                        Console.ForegroundColor = ConsoleColor.White;
                     }
                 }
 
@@ -108,16 +120,17 @@ namespace RAG.Utilities
                     collectionExists = true;
                 }
 
-                DataStax.Document document = new DataStax.Document();
+                DataStax.InsertOne document = new DataStax.InsertOne();
                 document.vector = er.data[0].embedding;
-                document.company = company;
-                document._id = id;
-                customers.insertMany.documents.Add(document);
+                document.name = name;
+                document.docType = docType;
+                document._id = $"{docType}.{id}";
+                documents.insertMany.documents.Add(document);
 
             }
 
             // Add the embedding to the collection
-            await dsAPI.WriteAsync(collectionName, customers);
+            await dsAPI.WriteAsync(collectionName, documents);
 
 
         }

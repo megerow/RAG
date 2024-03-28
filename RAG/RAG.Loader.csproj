@@ -12,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Documents\SalesReps\" />
-    <Folder Include="Documents\Products\" />
+    <Folder Include="Documents\DocType\" />
+    <Folder Include="Documents\Product\" />
     <Folder Include="Data\" />
   </ItemGroup>
 

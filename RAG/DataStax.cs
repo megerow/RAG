@@ -43,17 +43,17 @@ namespace RAG.DataStax
             return null;
         }
 
-        public async Task WriteAsync(string collectionName, string id, string company, List<double> vector)
+        public async Task WriteAsync(string collectionName, string id, string name, string docType, List<double> vector)
         {
-            Customer customer = new Customer(id, company, vector);
+            Document document = new Document(id, name, docType, vector);
 
-            string customerJson = JsonConvert.SerializeObject(customer);
+            string docJson = JsonConvert.SerializeObject(document);
 
 
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://953ccde9-fa5a-4634-a3a9-31d41d3bfb33-us-east1.apps.astra.datastax.com/api/json/v1/default_keyspace/" + collectionName);
             request.Headers.Add("Token", "AstraCS:jBqdQovblyPQlWIgBZtsGEws:aa14ebbbcd7f99d3f419f9ae56439cacd776bbc0bf20892e654a42a72a187879");
-            var content = new StringContent(customerJson, null, "application/json");
+            var content = new StringContent(docJson, null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
@@ -61,10 +61,10 @@ namespace RAG.DataStax
 
         }
 
-        public async Task WriteAsync(string collectionName, Customers customers)
+        public async Task WriteAsync(string collectionName, Documents documents)
         {
 
-            string customersJson = JsonConvert.SerializeObject(customers);
+            string customersJson = JsonConvert.SerializeObject(documents);
 
 
             var client = new HttpClient();
@@ -81,30 +81,32 @@ namespace RAG.DataStax
 
     // -- INSERT ONE
 
-    public class Document
+    public class InsertOne
     {
         public string _id { get; set; }
-        public string company { get; set; }
+        public string name { get; set; }
+        public string docType { get; set; }
 
         [JsonProperty("$vector")]
         public List<double> vector { get; set; }
     }
 
-    public class InsertOne
+    public class InsertOneDocument
     {
-        public Document document { get; set; } = new Document();
+        public InsertOne document { get; set; } = new InsertOne();
     }
 
-    public class Customer
+    public class Document
     {
-        public InsertOne insertOne { get; set; } = new InsertOne();
+        public InsertOneDocument insertOne { get; set; } = new InsertOneDocument();
 
-        public Customer() { }
+        public Document() { }
 
-        public Customer(string id, string company, List<double> vector)
+        public Document(string id, string name, string docType, List<double> vector)
         {
             this.insertOne.document._id = id;
-            this.insertOne.document.company = company;
+            this.insertOne.document.name = name;
+            this.insertOne.document.docType = docType;
             this.insertOne.document.vector = vector;
         }
     }
@@ -113,7 +115,7 @@ namespace RAG.DataStax
 
     public class InsertMany
     {
-        public List<Document> documents { get; set; } = new List<Document>();
+        public List<InsertOne> documents { get; set; } = new List<InsertOne>();
         public Options options { get; set; } = new Options();
     }
 
@@ -122,7 +124,7 @@ namespace RAG.DataStax
         public bool ordered { get; set; } = false;
     }
 
-    public class Customers
+    public class Documents
     {
         public InsertMany insertMany { get; set; } = new InsertMany();
     }
@@ -163,7 +165,8 @@ namespace RAG.DataStax
     public class FoundDocument
     {
         public string _id { get; set; }
-        public string company { get; set; }
+        public string name { get; set; }
+        public string docType { get; set; }
 
         [JsonProperty("$vector")]
         public List<double> vector { get; set; }
