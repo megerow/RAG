@@ -139,7 +139,7 @@ namespace RAG.DataStax
 
     public class FindOptions
     {
-        public int limit { get; set; } = 1;
+        public int limit { get; set; } = 3;
         public bool includeSimilarity { get; set; } = true;
     }
 

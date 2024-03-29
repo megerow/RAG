@@ -42,10 +42,11 @@ namespace RAG.Utilities
                 FindRequest fr = new FindRequest();
                 fr.find.sort.vector = embeddingResponse.data[0].embedding;
                 FindResult fres = await dsAPI.FindAsync(collectionName, fr);
+                double similarity = fres.data.documents[0].similarity;
 
                 // Get the best matching document type based on it's ID
                 string profileText = File.ReadAllText($"C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\{fres.data.documents[0].docType}\\" + fres.data.documents[0]._id.Split('.').Last() + ".txt");
-                Console.WriteLine($"doctype: {profileText}");
+                Console.WriteLine($"\ndoctype: {profileText} [{similarity}]");
 
                 // Use the previous query to lookup the data in the correct collection
                 string docType = profileText.Split('|').First().ToLower();
@@ -53,7 +54,8 @@ namespace RAG.Utilities
                 fr.find.sort.vector = embeddingResponse.data[0].embedding;
                 fres = await dsAPI.FindAsync(docType, fr);
                 profileText = File.ReadAllText($"C:\\Users\\meger\\source\\repos\\RAG\\RAG\\Documents\\{docType}\\" + fres.data.documents[0]._id.Split('.').Last() + ".txt");
-                Console.WriteLine($"{docType}: {profileText}");
+                similarity = fres.data.documents[0].similarity;
+                Console.WriteLine($"\n{docType} [{similarity}]: {profileText}");
 
                 // Get the ChatGPT response using this customer profile
                 ChatRequest cr = new OpenAI.ChatRequest();
