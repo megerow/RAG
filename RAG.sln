@@ -5,6 +5,8 @@ VisualStudioVersion = 17.9.34616.47
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Loader", "RAG\RAG.Loader.csproj", "{5FC02DF4-5572-4CE7-B3A2-1C6480B3A41C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RAG2", "RAG2\RAG2.csproj", "{2038F764-C06A-4D32-90FB-C164A456E811}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{5FC02DF4-5572-4CE7-B3A2-1C6480B3A41C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5FC02DF4-5572-4CE7-B3A2-1C6480B3A41C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5FC02DF4-5572-4CE7-B3A2-1C6480B3A41C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2038F764-C06A-4D32-90FB-C164A456E811}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2038F764-C06A-4D32-90FB-C164A456E811}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2038F764-C06A-4D32-90FB-C164A456E811}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2038F764-C06A-4D32-90FB-C164A456E811}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
