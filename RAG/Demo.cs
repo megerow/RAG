@@ -96,7 +96,7 @@ namespace RAG.Utilities
                 {
                     try
                     {
-                        er = await openAiAPI.EmbedAsync(text);
+                        er = await openAiAPI.EmbedAsync($"Type: {docType}, Name: {name}, Text: {text}");
                         break;
                     }
                     catch (Exception ex)

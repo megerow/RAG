@@ -28,7 +28,7 @@ namespace RAG2
             await dsAPI.WriteAsync("doctype", documents);
         }
 
-        public static string CallGPT (string prompt)
+        public static string CallGPT(string prompt, string profileText = null, bool displayAnswer = false)
         {
             // Setup
             // ---------------------------------------------------------------
@@ -46,12 +46,27 @@ namespace RAG2
             cr.messages.Add(new ChatRequestMessage());
             cr.messages[0].content = $"{prompt}";
             string answer = openAiAPI.Chat(cr).Result.choices[0].message.content;
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write("\nAnswer: ");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(answer);
+
+            if (displayAnswer)
+            { 
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Write("\nAnswer: ");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine(answer);
+
+                if (!string.IsNullOrEmpty(profileText))
+                {
+                    DisplayMessage(profileText);
+                }
+            }
 
             return answer;
+        }
+
+        public static async void DeleteItem(string collectionName, string id)
+        {
+            DataStax.API dsAPI = new DataStax.API();
+            await dsAPI.DeleteItemAsync(collectionName, id);
         }
 
         public static string GetDataSource()
@@ -73,25 +88,32 @@ namespace RAG2
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.Write($"\n{message}: ");
             Console.ForegroundColor = ConsoleColor.White;
-            return Console.ReadKey().KeyChar.ToString().ToLower() == "y";
+            return Console.ReadKey().KeyChar.ToString().ToLower() != "n";
         }
 
-        public static void DisplayMessage(string message)
+        public static void DisplayMessage(string message, ConsoleColor color = ConsoleColor.White)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write($"\n{message}: ");
+            Console.ForegroundColor = color;
+            Console.Write($"\n{message}\n");
             Console.ForegroundColor = ConsoleColor.White;
         }
 
         public static FindResult Find (string collectionName, EmbeddingResult embeddingResult, int rowsToReturn)
         {
-            DataStax.API dsAPI = new DataStax.API();
-            FindRequest fr = new FindRequest();
-            fr.find.sort.vector = embeddingResult.data[0].embedding;
-            fr.find.options.limit = rowsToReturn;
-            FindResult fres = dsAPI.FindAsync(collectionName, fr).Result;
-            double similarity = fres.data.documents[0].similarity;
-            return fres;
+            try
+            {
+                DataStax.API dsAPI = new DataStax.API();
+                FindRequest fr = new FindRequest();
+                fr.find.sort.vector = embeddingResult.data[0].embedding;
+                fr.find.options.limit = rowsToReturn;
+                FindResult fres = dsAPI.FindAsync(collectionName, fr).Result;
+                double similarity = fres.data.documents[0].similarity;
+                return fres;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
         }
 
         public static EmbeddingResult GetEmbedding (string text)

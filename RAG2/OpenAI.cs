@@ -100,7 +100,7 @@ namespace RAG.OpenAI
     {
         public string model { get; set; } = "gpt-3.5-turbo";
         public List<ChatRequestMessage> messages { get; set; } = new List<ChatRequestMessage>();
-        public int temperature { get; set; } = 0;
+        public double temperature { get; set; } = 0.5;
         public int top_p { get; set; } = 1;
         public int n { get; set; } = 1;
         public bool stream { get; set; } = false;

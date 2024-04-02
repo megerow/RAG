@@ -1,9 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RAG.DataStax
 {
@@ -18,7 +13,18 @@ namespace RAG.DataStax
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
+            RAG2.Utilities.DisplayMessage(await response.Content.ReadAsStringAsync());
+        }
+
+        public async Task DeleteItemAsync(string collectionName, string id)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, $"https://953ccde9-fa5a-4634-a3a9-31d41d3bfb33-us-east1.apps.astra.datastax.com/api/json/v1/default_keyspace/{collectionName}");
+            request.Headers.Add("Token", "AstraCS:jBqdQovblyPQlWIgBZtsGEws:aa14ebbbcd7f99d3f419f9ae56439cacd776bbc0bf20892e654a42a72a187879");
+            var content = new StringContent("{\n  \"deleteOne\": {\n    \"filter\": {\n      \"_id\": \""+id+"\"\n    }\n  }\n}\n", null, "application/json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
         }
 
         public async Task<FindResult> FindAsync(string collectionName, FindRequest findRequest)
@@ -38,7 +44,7 @@ namespace RAG.DataStax
                 return fr;
             } catch (Exception ex)
             {
-                Console.WriteLine($"{ex.Message}");
+                RAG2.Utilities.DisplayMessage($"{ex.Message}");
             }
             return null;
         }
@@ -57,16 +63,11 @@ namespace RAG.DataStax
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            //Console.WriteLine(await response.Content.ReadAsStringAsync());
-
         }
 
         public async Task WriteAsync(string collectionName, Documents documents)
         {
-
             string customersJson = JsonConvert.SerializeObject(documents);
-
-
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://953ccde9-fa5a-4634-a3a9-31d41d3bfb33-us-east1.apps.astra.datastax.com/api/json/v1/default_keyspace/" + collectionName);
             request.Headers.Add("Token", "AstraCS:jBqdQovblyPQlWIgBZtsGEws:aa14ebbbcd7f99d3f419f9ae56439cacd776bbc0bf20892e654a42a72a187879");
@@ -74,8 +75,7 @@ namespace RAG.DataStax
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
-
+            //RAG2.Utilities.DisplayMessage(await response.Content.ReadAsStringAsync());
         }
     }
 

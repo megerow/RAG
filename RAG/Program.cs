@@ -18,14 +18,14 @@ Console.WriteLine("Retrieval Augmented Generation (RAG) Prototype");
 //await Demo.LoaderAsync(collectionName);
 
 // 3/27/2024: M.Gerow; create collection containing customer, product, and sales rep profiles
-//await Demo.LoaderAsync("customer", "customer");
-//await Demo.LoaderAsync("product", "product");
-//await Demo.LoaderAsync("salesrep", "salesrep");
+await Demo.LoaderAsync("all", "customer");
+await Demo.LoaderAsync("all", "product");
+await Demo.LoaderAsync("all", "salesrep");
 //await Demo.LoaderAsync("doctype", "doctype");
 
 // Let the user ask questions and have ChatGPT
 // respond using  information found in our customer profiles.
-await Demo.QuestionAndAnswerAsync("doctype");
+//await Demo.QuestionAndAnswerAsync("doctype");
 
 return;
 
