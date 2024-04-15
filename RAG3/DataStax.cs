@@ -13,7 +13,7 @@ namespace RAG.DataStax
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            RAG2.Utilities.DisplayMessage(await response.Content.ReadAsStringAsync());
+            RAG4.Utilities.DisplayMessage(await response.Content.ReadAsStringAsync());
         }
 
         public async Task DeleteItemAsync(string collectionName, string id)
@@ -44,7 +44,7 @@ namespace RAG.DataStax
                 return fr;
             } catch (Exception ex)
             {
-                RAG2.Utilities.DisplayMessage($"{ex.Message}");
+                RAG4.Utilities.DisplayMessage($"{ex.Message}");
             }
             return null;
         }

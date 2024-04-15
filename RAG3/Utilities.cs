@@ -5,7 +5,7 @@ using RAG.OpenAI;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
-namespace RAG2
+namespace RAG4
 {
     public class Utilities
     {
@@ -146,7 +146,7 @@ namespace RAG2
                     {
                         // #1: Get the SQL to query the database
 
-                        prompt = $"Be sure to use correct Microsft SQL Server syntax. You are a Microst SQL Server database developer.You have a Microsoft SQL Server database view named vwORDERS with the following structure:Date datetime, Quantity int, Product varchar(50), Price money, Customer varchar(50), SalesRep varchar(50), Amount money. Provide just the valid Microsoft SQL Server TSQL SELECT statement to answer the following question: {question}.";
+                        prompt = $"Be sure to use correct Microsoft SQL Server syntax. You are a Microsoft SQL Server database developer.You have a Microsoft SQL Server database view named vwORDERS with the following structure:Date datetime, Quantity int, Product varchar(50), Price money, Customer varchar(50), SalesRep varchar(50), Amount money. Provide just the valid Microsoft SQL Server TSQL SELECT statement to answer the following question: {question}.";
 
                         // Call GPT to get the answer
                         sql = Utilities.CallGPT(prompt);
