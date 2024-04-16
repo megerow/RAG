@@ -27,7 +27,7 @@ while (true)
         dataSource = Utilities.GetDataSource(question);
 
         // Display the answer
-        Utilities.DisplayMessage($"\nThe {dataSource} database will be used.\n");
+        Utilities.DisplayMessage($"The {dataSource} database will be used.");
 
         if (dataSource.ToLower() == "vector")
         {
@@ -37,6 +37,8 @@ while (true)
         {
             Utilities.QuerySQL(question);
         }
+
+        qNum++;
     }
     else
     {
