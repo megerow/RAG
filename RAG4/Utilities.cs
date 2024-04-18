@@ -109,7 +109,57 @@ namespace RAG4
             {
                 sql = sql.Substring(sql.ToLower().IndexOf("select"));
             }
+
+            string[] sqlSegments = sql.Split('=');
+            for (int i = 0; i < sqlSegments.Length; i++)
+            {
+                if (sqlSegments[i].ToLower().EndsWith("salesrep ")
+                    || sqlSegments[i].ToLower().EndsWith("customer ")
+                    || sqlSegments[i].ToLower().EndsWith("product "))
+                {
+                    int p0 = GetNthIndex(sqlSegments[i + 1], '\'', 1);
+                    int p1 = GetNthIndex(sqlSegments[i + 1], '\'', 2);
+                    sqlSegments[i+1] = sqlSegments[i+1].Substring(0, p0+1)
+                        + "%"
+                        + sqlSegments[i+1].Substring(p0+1, p1-p0-1)
+                        + "%"
+                        + sqlSegments[i+1].Substring(p1);
+                }
+            }
+            sql = "";
+            for (int i = 0; i < sqlSegments.Length - 1; i++)
+            {
+                if (sqlSegments[i].ToLower().EndsWith("salesrep ")
+                    || sqlSegments[i].ToLower().EndsWith("customer ")
+                    || sqlSegments[i].ToLower().EndsWith("product "))
+                { 
+                    sql += sqlSegments[i] + "LIKE";
+                }
+                else
+                {
+                    sql += sqlSegments[i] + "=";
+                }
+            }
+            sql += sqlSegments.Last();
+
             return sql;
+        }
+
+        public static int GetNthIndex(string s, char t, int n)
+        {
+            int count = 0;
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (s[i] == t)
+                {
+                    count++;
+                    if (count == n)
+                    {
+                        return i;
+                    }
+                }
+            }
+            return -1;
         }
 
         public static void LogIt(string s)
@@ -253,13 +303,20 @@ namespace RAG4
                     DataTable dataTable = new DataTable();
                     da.Fill(dataTable);
 
+                    // If only one column and row returned, change its name to "Answer" to 
+                    // help GPT understand what to do.
+                    if (dataTable.Columns.Count == 1 && dataTable.Rows.Count == 1)
+                    {
+                        dataTable.Columns[0].ColumnName = "Answer";
+                    }
+
                     foreach (DataRow row in dataTable.Rows)
                     {
+                        prompt += "\n";
                         foreach (DataColumn col in dataTable.Columns)
                         {
                             prompt += $"{col.ColumnName}: {row[col.ColumnName]},";
                         }
-                        prompt += "\n";
                     }
                 }
 
@@ -290,7 +347,7 @@ namespace RAG4
             await dsAPI.WriteAsync("doctype", documents);
         }
 
-        public static string CallGPT(string prompt, string profileText = null, bool displayAnswer = false)
+        public static string CallGPT(string prompt, string profileText = null, bool displayAnswer = false, bool displayPrompt = false)
         {
             // Setup
             // ---------------------------------------------------------------
@@ -303,6 +360,8 @@ namespace RAG4
             // the user's questions, so need to get access to the API.
             OpenAI.API openAiAPI = new OpenAI.API();
             // ---------------------------------------------------------------
+
+            if (displayPrompt) DisplayMessage($"PROMPT: {prompt}\"");
 
             ChatRequest cr = new OpenAI.ChatRequest();
             cr.messages.Add(new ChatRequestMessage());
