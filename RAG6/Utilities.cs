@@ -4,8 +4,9 @@ using RAG.DataStax;
 using RAG.OpenAI;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using Newtonsoft.Json;
 
-namespace RAG4
+namespace RAG6
 {
     public class Utilities
     {
@@ -272,12 +273,142 @@ namespace RAG4
             }
         }
 
+        public static void QueryWeather(string question)
+        {
+            string prompt = "";
+            string answer = "";
+            string loc = "";
+
+            try
+            {
+                // #1: Get the city and state specified by the end user
+
+                prompt = $"Extract the city and state in the united states for the following question: {question}. Answer should be in format: City;State. The state should be in 2-character form. If you can determine the city, but not the state, use \"CA\" for the state. If you cannot determine neither the city or state answer \"Unknown\".";
+
+                // #2: Call GPT to get the answer
+                loc = CallGPT(prompt);
+                string city = loc.Split(';').First();
+                string state = loc.Split(';').Last();
+                string country = "usa";
+
+                //DisplayMessage($"{loc}", ConsoleColor.Gray);
+
+                // #3: Now use the OpenWeatherMaps API to get the lat/long for the city and state
+                var client = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Get, $"http://api.openweathermap.org/geo/1.0/direct?q={city},{state},{country}&appid=d87f3cd5eec403ef0737c3b4131709a9");
+                var response = client.Send(request);
+                response.EnsureSuccessStatusCode();
+                Geo[] geo = JsonConvert.DeserializeObject<Geo[]>(response.Content.ReadAsStringAsync().Result);
+
+                //DisplayMessage($"Latitude: {geo.First().lat}, Longitude: {geo.First().lon}", ConsoleColor.Gray);
+
+                // #4: Use the latitude/longitude to get the current weather
+                client = new HttpClient();
+                request = new HttpRequestMessage(HttpMethod.Get, $"https://api.openweathermap.org/data/2.5/weather?lat={geo.First().lat}&lon={geo.First().lon}&appid=d87f3cd5eec403ef0737c3b4131709a9&units=imperial");
+                response = client.Send(request);
+                response.EnsureSuccessStatusCode();
+                string json = response.Content.ReadAsStringAsync().Result;
+                WeatherRoot weather = JsonConvert.DeserializeObject<WeatherRoot>(json);
+
+                string data = $"The weather in {city}, {state} is: {weather.weather.First().description}, Temperature: {weather.main.feels_like} degrees Fahrenheit, Wind speed: {weather.wind.speed} MPH";
+
+                //DisplayMessage(data, ConsoleColor.Gray);
+
+                // #5: Call ChatGPT with the data to answer the question.
+                prompt = $"Answer the question: {question}, using only the following data: {data}.";
+
+                answer = CallGPT(prompt);
+
+                DisplayMessage(answer, ConsoleColor.Cyan);
+
+                return;
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMessage($"Oops! An error occurred. {ex.Message}", ConsoleColor.Cyan);
+            }
+        }
+
+        // OpenWeatherMaps classes
+        public class Geo
+        {
+            public string name { get; set; }
+            public double lat { get; set; }
+            public double lon { get; set; }
+            public string country { get; set; }
+            public string state { get; set; }
+        }
+
+        // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
+        public class WeatherClouds
+        {
+            public int all { get; set; }
+        }
+
+        public class WeatherCoord
+
+        {
+            public double lon { get; set; }
+            public double lat { get; set; }
+        }
+
+        public class WeatherMain
+        {
+            public double temp { get; set; }
+            public double feels_like { get; set; }
+            public double temp_min { get; set; }
+            public double temp_max { get; set; }
+            public int pressure { get; set; }
+            public int humidity { get; set; }
+        }
+
+        public class WeatherRoot
+        {
+            public WeatherCoord coord { get; set; }
+            public List<Weather> weather { get; set; }
+            public string @base { get; set; }
+            public WeatherMain main { get; set; }
+            public int visibility { get; set; }
+            public Wind wind { get; set; }
+            public WeatherClouds clouds { get; set; }
+            public int dt { get; set; }
+            public Sys sys { get; set; }
+            public int timezone { get; set; }
+            public int id { get; set; }
+            public string name { get; set; }
+            public int cod { get; set; }
+        }
+
+        public class Sys
+        {
+            public int type { get; set; }
+            public int id { get; set; }
+            public string country { get; set; }
+            public int sunrise { get; set; }
+            public int sunset { get; set; }
+        }
+
+        public class Weather
+        {
+            public int id { get; set; }
+            public string main { get; set; }
+            public string description { get; set; }
+            public string icon { get; set; }
+        }
+
+        public class Wind
+        {
+            public double speed { get; set; }
+            public int deg { get; set; }
+        }
+
+
         public static void QuerySQL(string question)
         {
             // Connect to the Azure RAG database
             //string? question = "";
             string prompt = "";
-            int qNum = 1;
             string answer = "";
             string sql = "";
 
@@ -370,10 +501,10 @@ namespace RAG4
 
             if (displayAnswer)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write("\nAnswer: ");
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine(answer);
+                //Console.ForegroundColor = ConsoleColor.Yellow;
+                //Console.Write("\nAnswer: ");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"\n{answer}");
 
                 if (!string.IsNullOrEmpty(profileText))
                 {
@@ -393,7 +524,7 @@ namespace RAG4
         public static string GetDataSource(string question)
         {
             OpenAI.API openAiAPI = new OpenAI.API();
-            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data.\r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source.\r\n\r\n";
+            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. WEATHER: provides detailed data for questions related to the weather or temperature.\r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If not of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
             string answer = CallGPT(prompt);
             return answer;
         }
