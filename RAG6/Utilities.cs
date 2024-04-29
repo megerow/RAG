@@ -1,4 +1,12 @@
-﻿using OpenAI = RAG.OpenAI;
+﻿// -------------------------------------------------------------------------------
+// Purpose: High-level tilities to use when working with any of the services 
+//          or data sources.
+//
+// By:      Mark Gerow
+// Date:    4/29/2024
+// --------------------------------------------------------------------------------
+
+using OpenAI = RAG.OpenAI;
 using DataStax = RAG.DataStax;
 using RAG.DataStax;
 using RAG.OpenAI;

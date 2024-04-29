@@ -1,4 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿// -------------------------------------------------------------------------------
+// Purpose: Helper class to work with the DataStax vector database service.
+//
+// By:      Mark Gerow
+// Date:    4/29/2024
+// --------------------------------------------------------------------------------
+
+using Newtonsoft.Json;
 
 namespace RAG.DataStax
 {

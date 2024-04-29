@@ -1,21 +1,24 @@
-﻿// Main routine for RAG6 prototype. Essentially just keeps asking seeker if they
+﻿// -------------------------------------------------------------------------------
+// Purpose: A basic example of a RAG implementation using OpenAI ChatGPT and
+//          supporting services.
+//
+// By:      Mark Gerow
+// Date:    4/29/2024
+// --------------------------------------------------------------------------------
+// Main routine for RAG6 prototype. Essentially just keeps asking seeker if they
 // have a question, determines the appropriate data source to answer the question,
 // gets the answer, and then repeats until the seeker presses [Enter] without
 // providing a question.
+// --------------------------------------------------------------------------------
 using RAG6;
 
 string? question = "";
-string prompt = "";
 int qNum = 1;
-string answer = "";
-string sql = "";
 string dataSource = "";
 
 // Loop, prompting user to ask a question
 while (true)
 {
-    answer = "";
-    prompt = "";
 
     // Seeker asks a question
     Console.ForegroundColor = ConsoleColor.Yellow;

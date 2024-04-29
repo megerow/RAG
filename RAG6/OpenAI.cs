@@ -1,4 +1,11 @@
-﻿using System;
+﻿// -------------------------------------------------------------------------------
+// Purpose: Helper class to work with the OpenAI chat and embedding services.
+//
+// By:      Mark Gerow
+// Date:    4/29/2024
+// --------------------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

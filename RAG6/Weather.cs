@@ -1,4 +1,12 @@
-﻿using System;
+﻿// -------------------------------------------------------------------------------
+// Purpose: The following classes represent the structure returned by 
+//          the WEATHER API.
+//
+// By:      Mark Gerow
+// Date:    4/29/2024
+// --------------------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,9 +14,6 @@ using System.Threading.Tasks;
 
 namespace RAG6
 {
-
-    // The following classes represent the structure returned by the WEATHER API.
-
     public class Geo
     {
         public string name { get; set; }

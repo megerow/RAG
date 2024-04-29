@@ -1,4 +1,11 @@
-﻿using System;
+﻿// -------------------------------------------------------------------------------
+// Purpose: Classes to work with the FinnHub stock API.
+//
+// By:      Mark Gerow
+// Date:    4/29/2024
+// --------------------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
