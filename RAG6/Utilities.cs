@@ -13,6 +13,171 @@ namespace RAG6
     public class Utilities
     {
         public static string logFilePath = $"c:\\temp\\RAG-{DateTime.Now.Year}-{DateTime.Now.Month}-{DateTime.Now.Day}.txt";
+
+        /// <summary>
+        /// OBSOLETE: Add an intent to the DocType collection in the vector database.
+        /// </summary>
+        /// <param name="docType">Doc type to assign</param>
+        /// <param name="embedding">Embedding</param>
+        public static async void AddIntent(string docType, EmbeddingResult embedding)
+        {
+            DataStax.InsertOne document = new DataStax.InsertOne();
+            document.vector = embedding.data[0].embedding;
+            document.name = docType;
+            document.docType = "doctype";
+            var r = new Random(DateTime.Now.Second);
+            document._id = r.NextInt64(1000000, 10000000).ToString();
+            DataStax.Documents documents = new DataStax.Documents();
+            documents.insertMany.documents.Add(document);
+            DataStax.API dsAPI = new DataStax.API();
+            await dsAPI.WriteAsync("doctype", documents);
+        }
+
+        /// <summary>
+        /// Call ChatGPT API to get answer to question.
+        /// </summary>
+        /// <param name="prompt">The formatted question (aka prompt), including any RAG data to send to ChatGPT</param>
+        /// <param name="profileText">If provided, display the vector profile used to answer the question</param>
+        /// <param name="displayAnswer">If TRUE, display the answer in this method</param>
+        /// <param name="displayPrompt">If TRUE, display the prompt passed into the method</param>
+        /// <returns></returns>
+        public static string CallGPT(string prompt, string? profileText = null, bool displayAnswer = false, bool displayPrompt = false)
+        {
+            // Setup
+            // ---------------------------------------------------------------
+            // DataStax is used for the vector store, so need to get access
+            // to its API and define a variable to hold the query response.
+            DataStax.API dsAPI = new DataStax.API();
+            OpenAI.EmbeddingResult embeddingResponse = new OpenAI.EmbeddingResult();
+            // ---------------------------------------------------------------
+            // OpenAI is used to generate the natural language responses to 
+            // the user's questions, so need to get access to the API.
+            OpenAI.API openAiAPI = new OpenAI.API();
+            // ---------------------------------------------------------------
+
+            if (displayPrompt) DisplayMessage($"PROMPT: {prompt}\"");
+
+            ChatRequest cr = new OpenAI.ChatRequest();
+            cr.messages.Add(new ChatRequestMessage());
+            cr.messages[0].content = $"{prompt}";
+            string answer = openAiAPI.Chat(cr).Result.choices[0].message.content;
+
+            if (displayAnswer)
+            {
+                //Console.ForegroundColor = ConsoleColor.Yellow;
+                //Console.Write("\nAnswer: ");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"\n{answer}");
+
+                if (!string.IsNullOrEmpty(profileText))
+                {
+                    DisplayMessage(profileText);
+                }
+            }
+
+            return answer;
+        }
+
+        /// <summary>
+        /// Delete an item (row) from a vector collection.
+        /// </summary>
+        /// <param name="collectionName">Name of collection containing the item to be deleted</param>
+        /// <param name="id">The unique ID of the item to be deleted</param>
+        public static async void DeleteItem(string collectionName, string id)
+        {
+            DataStax.API dsAPI = new DataStax.API();
+            await dsAPI.DeleteItemAsync(collectionName, id);
+        }
+
+        /// <summary>
+        /// Helper method to display text in the console window.
+        /// </summary>
+        /// <param name="message">Message to display</param>
+        /// <param name="color">Color to use</param>
+        public static void DisplayMessage(string message, ConsoleColor color = ConsoleColor.White)
+        {
+            Console.ForegroundColor = color;
+            Console.Write($"\n{message}\n");
+            Console.ForegroundColor = ConsoleColor.White;
+            LogIt($"\n{message}\n");
+        }
+
+        /// <summary>
+        /// Call the DataStax API to find the best match(es) for the provided embedding.
+        /// </summary>
+        /// <param name="collectionName">Name of collection (aka table) to search in the vector database</param>
+        /// <param name="embeddingResult">The embedding to look for</param>
+        /// <param name="rowsToReturn">Number of rows to return</param>
+        /// <returns>Result object containing best matches from the vector database</returns>
+        public static FindResult Find(string collectionName, EmbeddingResult embeddingResult, int rowsToReturn)
+        {
+            try
+            {
+                DataStax.API dsAPI = new DataStax.API();
+                FindRequest fr = new FindRequest();
+                fr.find.sort.vector = embeddingResult.data[0].embedding;
+                fr.find.options.limit = rowsToReturn;
+                FindResult fres = dsAPI.FindAsync(collectionName, fr).Result;
+                double similarity = fres.data.documents[0].similarity;
+                return fres;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Clean up SQL statement to use "LIKE" rather than "=" for certain columns.
+        /// </summary>
+        /// <param name="sql">Source SQL SELECT statement to clean up.</param>
+        /// <returns>Reformatted SQL SELECT statement</returns>
+        public static string FixUp(string sql)
+        {
+            sql = sql.Replace("```", "");
+            if (!sql.ToLower().StartsWith("select"))
+            {
+                sql = sql.Substring(sql.ToLower().IndexOf("select"));
+            }
+
+            string[] sqlSegments = sql.Split('=');
+            for (int i = 0; i < sqlSegments.Length; i++)
+            {
+                if (sqlSegments[i].ToLower().EndsWith("salesrep ")
+                    || sqlSegments[i].ToLower().EndsWith("customer ")
+                    || sqlSegments[i].ToLower().EndsWith("product "))
+                {
+                    int p0 = GetNthIndex(sqlSegments[i + 1], '\'', 1);
+                    int p1 = GetNthIndex(sqlSegments[i + 1], '\'', 2);
+                    sqlSegments[i + 1] = sqlSegments[i + 1].Substring(0, p0 + 1)
+                        + "%"
+                        + sqlSegments[i + 1].Substring(p0 + 1, p1 - p0 - 1)
+                        + "%"
+                        + sqlSegments[i + 1].Substring(p1);
+                }
+            }
+            sql = "";
+            for (int i = 0; i < sqlSegments.Length - 1; i++)
+            {
+                if (sqlSegments[i].ToLower().EndsWith("salesrep ")
+                    || sqlSegments[i].ToLower().EndsWith("customer ")
+                    || sqlSegments[i].ToLower().EndsWith("product "))
+                {
+                    sql += sqlSegments[i] + "LIKE";
+                }
+                else
+                {
+                    sql += sqlSegments[i] + "=";
+                }
+            }
+            sql += sqlSegments.Last();
+
+            return sql;
+        }
+
+        /// <summary>
+        /// Create 1,000 random orders in the vector database by randomly combining customers, products, and sales reps.
+        /// </summary>
         public static void GenerateOrderData()
         {
             // Will use this to generate random index into lists to create rows 
@@ -41,11 +206,10 @@ namespace RAG6
             }
         }
 
-        public class Customer
-        {
-            public string Name { get; set; }
-        }
-
+        /// <summary>
+        /// Provide a list of customer names used to generate random orders.
+        /// </summary>
+        /// <returns>Return a list of customers</returns>
         public static List<Customer> GetCustomers()
         {
             List<Customer> customers = new List<Customer>();
@@ -62,114 +226,25 @@ namespace RAG6
             return customers;
         }
 
-        public class Product
+        /// <summary>
+        /// Call ChatGPT API to determine the type of question being asked and the data source that
+        /// should be used to answer it.
+        /// </summary>
+        /// <param name="question">Seeker's question</param>
+        /// <returns>Name of data source to use</returns>
+        public static string GetDataSource(string question)
         {
-            public string Name { get; set; }
-            public double Price { get; set; }
+            OpenAI.API openAiAPI = new OpenAI.API();
+            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. WEATHER: provides detailed data for questions related to the weather or temperature. STOCK: provides data about stock prices or market conditions. \r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If not of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
+            string answer = CallGPT(prompt);
+            return answer;
         }
 
-        public static List<Product> GetProducts()
-        {
-            List<Product> products = new List<Product>();
-            products.Add(new Product() { Name = "AI Data Analytics Suit", Price = 2999 });
-            products.Add(new Product() { Name = "AI Chatbot Platform", Price = 1499 });
-            products.Add(new Product() { Name = "AI Image Recognition Software", Price = 3499 });
-            products.Add(new Product() { Name = "AI Virtual Assistant", Price = 1999 });
-            products.Add(new Product() { Name = "AI Speech Recognition System", Price = 2299 });
-            products.Add(new Product() { Name = "AI Predictive Maintenance Software", Price = 3999 });
-            products.Add(new Product() { Name = "AI Marketing Automation Platform", Price = 2799 });
-            products.Add(new Product() { Name = "AI Fraud Detection System", Price = 4299 });
-            products.Add(new Product() { Name = "AI Recommendation Engine", Price = 2499 });
-            products.Add(new Product() { Name = "AI Sentiment Analysis Tool", Price = 2199 });
-            return products;
-        }
-
-        public class SalesRep
-        {
-            public string Name { get; set; }
-        }
-
-        public static List<SalesRep> GetSalesReps()
-        {
-            List<SalesRep> salesReps = new List<SalesRep>();
-            salesReps.Add(new SalesRep() { Name = "Lance Rivers" });
-            salesReps.Add(new SalesRep() { Name = "Natalie Cruz" });
-            salesReps.Add(new SalesRep() { Name = "Max Stone" });
-            salesReps.Add(new SalesRep() { Name = "Samantha Fox" });
-            salesReps.Add(new SalesRep() { Name = "Ryan Cooper" });
-            salesReps.Add(new SalesRep() { Name = "Emily Hayes" });
-            salesReps.Add(new SalesRep() { Name = "Tyler Morgan" });
-            salesReps.Add(new SalesRep() { Name = "Olivia Lane" });
-            salesReps.Add(new SalesRep() { Name = "Cameron Brooks" });
-            salesReps.Add(new SalesRep() { Name = "Ella Patel" });
-            return salesReps;
-        }
-
-        public static string FixUp(string sql)
-        {
-            sql = sql.Replace("```", "");
-            if (!sql.ToLower().StartsWith("select"))
-            {
-                sql = sql.Substring(sql.ToLower().IndexOf("select"));
-            }
-
-            string[] sqlSegments = sql.Split('=');
-            for (int i = 0; i < sqlSegments.Length; i++)
-            {
-                if (sqlSegments[i].ToLower().EndsWith("salesrep ")
-                    || sqlSegments[i].ToLower().EndsWith("customer ")
-                    || sqlSegments[i].ToLower().EndsWith("product "))
-                {
-                    int p0 = GetNthIndex(sqlSegments[i + 1], '\'', 1);
-                    int p1 = GetNthIndex(sqlSegments[i + 1], '\'', 2);
-                    sqlSegments[i+1] = sqlSegments[i+1].Substring(0, p0+1)
-                        + "%"
-                        + sqlSegments[i+1].Substring(p0+1, p1-p0-1)
-                        + "%"
-                        + sqlSegments[i+1].Substring(p1);
-                }
-            }
-            sql = "";
-            for (int i = 0; i < sqlSegments.Length - 1; i++)
-            {
-                if (sqlSegments[i].ToLower().EndsWith("salesrep ")
-                    || sqlSegments[i].ToLower().EndsWith("customer ")
-                    || sqlSegments[i].ToLower().EndsWith("product "))
-                { 
-                    sql += sqlSegments[i] + "LIKE";
-                }
-                else
-                {
-                    sql += sqlSegments[i] + "=";
-                }
-            }
-            sql += sqlSegments.Last();
-
-            return sql;
-        }
-
-        public static int GetNthIndex(string s, char t, int n)
-        {
-            int count = 0;
-            for (int i = 0; i < s.Length; i++)
-            {
-                if (s[i] == t)
-                {
-                    count++;
-                    if (count == n)
-                    {
-                        return i;
-                    }
-                }
-            }
-            return -1;
-        }
-
-        public static void LogIt(string s)
-        {
-            File.AppendAllText(logFilePath, s);
-        }
-
+        /// <summary>
+        /// Get embedding for a given string so that it can be used for vector search.
+        /// </summary>
+        /// <param name="text">Text to get embedding for</param>
+        /// <returns>Embedding</returns>
         public static EmbeddingResult GetEmbedding(string text)
         {
             // Setup
@@ -189,24 +264,208 @@ namespace RAG6
             return embeddingResult;
         }
 
-        public static FindResult Find(string collectionName, EmbeddingResult embeddingResult, int rowsToReturn)
+        /// <summary>
+        /// Provide a list of product names and prices used to generate random orders.
+        /// </summary>
+        /// <returns>Return a list of products</returns>
+        public static List<Product> GetProducts()
         {
+            List<Product> products = new List<Product>();
+            products.Add(new Product() { Name = "AI Data Analytics Suit", Price = 2999 });
+            products.Add(new Product() { Name = "AI Chatbot Platform", Price = 1499 });
+            products.Add(new Product() { Name = "AI Image Recognition Software", Price = 3499 });
+            products.Add(new Product() { Name = "AI Virtual Assistant", Price = 1999 });
+            products.Add(new Product() { Name = "AI Speech Recognition System", Price = 2299 });
+            products.Add(new Product() { Name = "AI Predictive Maintenance Software", Price = 3999 });
+            products.Add(new Product() { Name = "AI Marketing Automation Platform", Price = 2799 });
+            products.Add(new Product() { Name = "AI Fraud Detection System", Price = 4299 });
+            products.Add(new Product() { Name = "AI Recommendation Engine", Price = 2499 });
+            products.Add(new Product() { Name = "AI Sentiment Analysis Tool", Price = 2199 });
+            return products;
+        }
+
+        /// <summary>
+        /// Helper method to return the position of the nth occurance of a character
+        /// withing a string.
+        /// </summary>
+        /// <param name="s">String to search</param>
+        /// <param name="t">Character to find</param>
+        /// <param name="n">The instance of the character for which to return the position</param>
+        /// <returns>Position of the nth occurence of the specified character within the provided string</returns>
+        public static int GetNthIndex(string s, char t, int n)
+        {
+            int count = 0;
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (s[i] == t)
+                {
+                    count++;
+                    if (count == n)
+                    {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Get list of sales rep names used to generate random orders.
+        /// </summary>
+        /// <returns>List of sales reps</returns>
+        public static List<SalesRep> GetSalesReps()
+        {
+            List<SalesRep> salesReps = new List<SalesRep>();
+            salesReps.Add(new SalesRep() { Name = "Lance Rivers" });
+            salesReps.Add(new SalesRep() { Name = "Natalie Cruz" });
+            salesReps.Add(new SalesRep() { Name = "Max Stone" });
+            salesReps.Add(new SalesRep() { Name = "Samantha Fox" });
+            salesReps.Add(new SalesRep() { Name = "Ryan Cooper" });
+            salesReps.Add(new SalesRep() { Name = "Emily Hayes" });
+            salesReps.Add(new SalesRep() { Name = "Tyler Morgan" });
+            salesReps.Add(new SalesRep() { Name = "Olivia Lane" });
+            salesReps.Add(new SalesRep() { Name = "Cameron Brooks" });
+            salesReps.Add(new SalesRep() { Name = "Ella Patel" });
+            return salesReps;
+        }
+
+        /// <summary>
+        /// Prompt user for yes/no response and return TRUE if yes, otherwise FALSE.
+        /// </summary>
+        /// <param name="message">Message to display</param>
+        /// <returns>TRUE if user answered yes to prompt</returns>
+        public static bool GetYesNo(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"\n{message}: ");
+            Console.ForegroundColor = ConsoleColor.White;
+            return Console.ReadKey().KeyChar.ToString().ToLower() != "n";
+        }
+
+        /// <summary>
+        /// Write text to the log file.
+        /// </summary>
+        /// <param name="s">Text to write</param>
+        public static void LogIt(string s)
+        {
+            File.AppendAllText(logFilePath, s);
+        }
+
+        /// <summary>
+        /// Process a question that uses data from the SQL database
+        /// </summary>
+        /// <param name="question">Question asked by seeker</param>
+        public static void QuerySQL(string question)
+        {
+            // Connect to the Azure RAG database
+            //string? question = "";
+            string prompt = "";
+            string answer = "";
+            string sql = "";
+
             try
             {
-                DataStax.API dsAPI = new DataStax.API();
-                FindRequest fr = new FindRequest();
-                fr.find.sort.vector = embeddingResult.data[0].embedding;
-                fr.find.options.limit = rowsToReturn;
-                FindResult fres = dsAPI.FindAsync(collectionName, fr).Result;
-                double similarity = fres.data.documents[0].similarity;
-                return fres;
+                // #1: Get the SQL to query the database
+
+                prompt = $"Be sure to use correct Microsoft SQL Server syntax. You are a Microsoft SQL Server database developer.You have a Microsoft SQL Server database view named vwORDERS with the following structure:Date datetime, Quantity int, Product varchar(50), Price money, Customer varchar(50), SalesRep varchar(50), Amount money. Provide just the valid Microsoft SQL Server TSQL SELECT statement to answer the following question: {question}. For units sold use whole integers with commas between thousands. For amount sold use currency format.";
+
+                // Call GPT to get the answer
+                sql = CallGPT(prompt);
+
+                // In case GPT added ``` characters to format SQL as code, remove them
+                sql = FixUp(sql);
+
+                //DisplayMessage($"{sql}", ConsoleColor.Gray);
+
+                // #2: Query the database and construct the prompt
+                prompt = $"You are an AI chatbot. Answer the question: \"{question}\" using the following data: ";
+                using (SqlConnection con = new SqlConnection("Server=tcp:megerow.database.windows.net,1433;Initial Catalog=RAG;Persist Security Info=False;User ID=megerow;Password=Zippy2024;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"))
+                {
+                    SqlDataAdapter da = new SqlDataAdapter(sql, con);
+                    DataTable dataTable = new DataTable();
+                    da.Fill(dataTable);
+
+                    // If only one column and row returned, change its name to "Answer" to 
+                    // help GPT understand what to do.
+                    if (dataTable.Columns.Count == 1 && dataTable.Rows.Count == 1)
+                    {
+                        dataTable.Columns[0].ColumnName = "Answer";
+                    }
+
+                    foreach (DataRow row in dataTable.Rows)
+                    {
+                        prompt += "\n";
+                        foreach (DataColumn col in dataTable.Columns)
+                        {
+                            prompt += $"{col.ColumnName}: {row[col.ColumnName]}";
+                            if (col.ColumnName != dataTable.Columns[dataTable.Columns.Count - 1].ColumnName) prompt += ", ";
+                        }
+                    }
+                }
+
+                answer = CallGPT(prompt, null, false, false);
+
+                // Display the answer
+                DisplayMessage($"{answer}", ConsoleColor.Cyan);
+
             }
             catch (Exception ex)
             {
-                return null;
+                DisplayMessage($"Oops! An error occurred. {ex.Message}", ConsoleColor.Cyan);
+            }
+
+        }
+
+        /// <summary>
+        /// Process a question that uses data from the FinnHub stock API
+        /// </summary>
+        /// <param name="question">Question asked by seeker</param>
+        public static void QueryStock(string question)
+        {
+            try
+            {
+                // Make sure the list of stock symbols is in memory, and if not load it.
+                if (symbols == null)
+                {
+                    string json = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG6\\Symbol.json");
+                    symbols = JsonConvert.DeserializeObject<List<Symbol>>(json);
+                }
+
+                // 2. Extract the name or symble from the question.
+                string prompt = $"Extract the company name in the following question: {question}. Answer should just be the company name and its stock ticker symbol with no other text. The format should be: Company:Symbol. If you cannot determine the ticker symbol answer \"Unknown\".";
+
+                // #2: Call GPT to get the answer
+                string company = CallGPT(prompt);
+
+                // 3. Search the symbols list for the name or symbol to use.
+                string symbol = company.Split(':')[1];
+
+                // 4. Call the FinnHub API to get it's current information
+                var client = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Get, $"https://finnhub.io/api/v1/quote?symbol={symbol}&token=conuvo9r01qm6hd181fgconuvo9r01qm6hd181g0");
+                var response = client.SendAsync(request).Result;
+                response.EnsureSuccessStatusCode();
+
+                Quote quote = JsonConvert.DeserializeObject<Quote>(response.Content.ReadAsStringAsync().Result);
+
+                // 5. Call ChatGPT to answer the question
+                prompt = $"Answer the question: {question}, using only the following data: {JsonConvert.SerializeObject(quote)}. Display amounts in dollar format.";
+
+                string answer = CallGPT(prompt);
+
+                DisplayMessage(answer, ConsoleColor.Cyan);
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMessage($"Oops! An error occurred. {ex.Message}", ConsoleColor.Cyan);
             }
         }
 
+        /// <summary>
+        /// Process a question that uses data from the vector database.
+        /// </summary>
+        /// <param name="question">Question asked by seeker</param>
         public static void QueryVector(string question)
         {
             double MIN_DATA_CONFIDENCE = .85;
@@ -271,86 +530,13 @@ namespace RAG6
                 // Display the answer
                 DisplayMessage($"{answer}", ConsoleColor.Cyan);
 
-
             }
         }
 
-        public class Symbol
-        {
-            public string currency { get; set; }
-            public string description { get; set; }
-            public string displaySymbol { get; set; }
-            public string figi { get; set; }
-            public object isin { get; set; }
-            public string mic { get; set; }
-            public string shareClassFIGI { get; set; }
-            public string symbol { get; set; }
-            public string symbol2 { get; set; }
-            public string type { get; set; }
-        }
-
-        public static List<Symbol> symbols { get; set; } = null;
-
-        public class Quote
-        {
-            public double c { get; set; }
-            public double CurrentPrice { get{ return c; } }
-            public double d { get; set; }
-            public double Change { get { return d; } }
-            public double dp { get; set; }
-            public double PercentChange { get { return dp; } }
-            public double h { get; set; }
-            public double High { get { return h; } }
-            public double l { get; set; }
-            public double Low { get { return l; } }
-            public double o { get; set; }
-            public double Open { get { return o; } }
-            public double pc { get; set; }
-            public double PreviousClose { get { return pc; } }
-            public int t { get; set; }
-        }
-
-        public static void QueryStock(string question)
-        {
-            try
-            {
-                // Make sure the list of stock symbols is in memory, and if not load it.
-                if (symbols == null)
-                {
-                    string json = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG6\\Symbol.json");
-                    symbols = JsonConvert.DeserializeObject<List<Symbol>>(json);
-                }
-
-                // 2. Extract the name or symble from the question.
-                string prompt = $"Extract the company name in the following question: {question}. Answer should just be the company name and its stock ticker symbol with no other text. The format should be: Company:Symbol. If you cannot determine the ticker symbol answer \"Unknown\".";
-
-                // #2: Call GPT to get the answer
-                string company = CallGPT(prompt);
-
-                // 3. Search the symbols list for the name or symbol to use.
-                string symbol = company.Split(':')[1];
-
-                // 4. Call the FinnHub API to get it's current information
-                var client = new HttpClient();
-                var request = new HttpRequestMessage(HttpMethod.Get, $"https://finnhub.io/api/v1/quote?symbol={symbol}&token=conuvo9r01qm6hd181fgconuvo9r01qm6hd181g0");
-                var response = client.SendAsync(request).Result;
-                response.EnsureSuccessStatusCode();
-
-                Quote quote = JsonConvert.DeserializeObject<Quote>(response.Content.ReadAsStringAsync().Result);
-
-                // 5. Call ChatGPT to answer the question
-                prompt = $"Answer the question: {question}, using only the following data: {JsonConvert.SerializeObject(quote)}. Display amounts in dollar format.";
-
-                string answer = CallGPT(prompt);
-
-                DisplayMessage(answer, ConsoleColor.Cyan);
-
-            } catch (Exception ex)
-            {
-                DisplayMessage($"Oops! An error occurred. {ex.Message}", ConsoleColor.Cyan);
-            }
-        }
-
+        /// <summary>
+        /// Process a question that uses data from the weather service
+        /// </summary>
+        /// <param name="question">Question asked by the seeker</param>
         public static void QueryWeather(string question)
         {
             string prompt = "";
@@ -408,257 +594,10 @@ namespace RAG6
             }
         }
 
-        // OpenWeatherMaps classes
-        public class Geo
-        {
-            public string name { get; set; }
-            public double lat { get; set; }
-            public double lon { get; set; }
-            public string country { get; set; }
-            public string state { get; set; }
-        }
+        /// <summary>
+        /// A list of stock ticker symbols.
+        /// </summary>
+        public static List<Symbol> symbols { get; set; } = null;
 
-        // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
-        public class WeatherClouds
-        {
-            public int all { get; set; }
-        }
-
-        public class WeatherCoord
-
-        {
-            public double lon { get; set; }
-            public double lat { get; set; }
-        }
-
-        public class WeatherMain
-        {
-            public double temp { get; set; }
-            public double feels_like { get; set; }
-            public double temp_min { get; set; }
-            public double temp_max { get; set; }
-            public int pressure { get; set; }
-            public int humidity { get; set; }
-        }
-
-        public class WeatherRoot
-        {
-            public WeatherCoord coord { get; set; }
-            public List<Weather> weather { get; set; }
-            public string @base { get; set; }
-            public WeatherMain main { get; set; }
-            public int visibility { get; set; }
-            public Wind wind { get; set; }
-            public WeatherClouds clouds { get; set; }
-            public int dt { get; set; }
-            public Sys sys { get; set; }
-            public int timezone { get; set; }
-            public int id { get; set; }
-            public string name { get; set; }
-            public int cod { get; set; }
-        }
-
-        public class Sys
-        {
-            public int type { get; set; }
-            public int id { get; set; }
-            public string country { get; set; }
-            public int sunrise { get; set; }
-            public int sunset { get; set; }
-        }
-
-        public class Weather
-        {
-            public int id { get; set; }
-            public string main { get; set; }
-            public string description { get; set; }
-            public string icon { get; set; }
-        }
-
-        public class Wind
-        {
-            public double speed { get; set; }
-            public int deg { get; set; }
-        }
-
-
-        public static void QuerySQL(string question)
-        {
-            // Connect to the Azure RAG database
-            //string? question = "";
-            string prompt = "";
-            string answer = "";
-            string sql = "";
-
-            try
-            {
-                // #1: Get the SQL to query the database
-
-                prompt = $"Be sure to use correct Microsoft SQL Server syntax. You are a Microsoft SQL Server database developer.You have a Microsoft SQL Server database view named vwORDERS with the following structure:Date datetime, Quantity int, Product varchar(50), Price money, Customer varchar(50), SalesRep varchar(50), Amount money. Provide just the valid Microsoft SQL Server TSQL SELECT statement to answer the following question: {question}. For units sold use whole integers with commas between thousands. For amount sold use currency format.";
-
-                // Call GPT to get the answer
-                sql = CallGPT(prompt);
-
-                // In case GPT added ``` characters to format SQL as code, remove them
-                sql = FixUp(sql);
-
-                //DisplayMessage($"{sql}", ConsoleColor.Gray);
-
-                // #2: Query the database and construct the prompt
-                prompt = $"You are an AI chatbot. Answer the question: \"{question}\" using the following data: ";
-                using (SqlConnection con = new SqlConnection("Server=tcp:megerow.database.windows.net,1433;Initial Catalog=RAG;Persist Security Info=False;User ID=megerow;Password=Zippy2024;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"))
-                {
-                    SqlDataAdapter da = new SqlDataAdapter(sql, con);
-                    DataTable dataTable = new DataTable();
-                    da.Fill(dataTable);
-
-                    // If only one column and row returned, change its name to "Answer" to 
-                    // help GPT understand what to do.
-                    if (dataTable.Columns.Count == 1 && dataTable.Rows.Count == 1)
-                    {
-                        dataTable.Columns[0].ColumnName = "Answer";
-                    }
-
-                    foreach (DataRow row in dataTable.Rows)
-                    {
-                        prompt += "\n";
-                        foreach (DataColumn col in dataTable.Columns)
-                        {
-                            prompt += $"{col.ColumnName}: {row[col.ColumnName]}";
-                            if (col.ColumnName != dataTable.Columns[dataTable.Columns.Count - 1].ColumnName) prompt += ", ";
-                        }
-                    }
-                }
-
-                answer = CallGPT(prompt, null, false, false);
-
-                // Display the answer
-                DisplayMessage($"{answer}", ConsoleColor.Cyan);
-
-            }
-            catch (Exception ex)
-            {
-                DisplayMessage($"Oops! An error occurred. {ex.Message}", ConsoleColor.Cyan);
-            }
-
-        }
-
-        public static async void AddIntent(string docType, EmbeddingResult embedding)
-        {
-            DataStax.InsertOne document = new DataStax.InsertOne();
-            document.vector = embedding.data[0].embedding;
-            document.name = docType;
-            document.docType = "doctype";
-            var r = new Random(DateTime.Now.Second);
-            document._id = r.NextInt64(1000000, 10000000).ToString();
-            DataStax.Documents documents = new DataStax.Documents();
-            documents.insertMany.documents.Add(document);
-            DataStax.API dsAPI = new DataStax.API();
-            await dsAPI.WriteAsync("doctype", documents);
-        }
-
-        public static string CallGPT(string prompt, string? profileText = null, bool displayAnswer = false, bool displayPrompt = false)
-        {
-            // Setup
-            // ---------------------------------------------------------------
-            // DataStax is used for the vector store, so need to get access
-            // to its API and define a variable to hold the query response.
-            DataStax.API dsAPI = new DataStax.API();
-            OpenAI.EmbeddingResult embeddingResponse = new OpenAI.EmbeddingResult();
-            // ---------------------------------------------------------------
-            // OpenAI is used to generate the natural language responses to 
-            // the user's questions, so need to get access to the API.
-            OpenAI.API openAiAPI = new OpenAI.API();
-            // ---------------------------------------------------------------
-
-            if (displayPrompt) DisplayMessage($"PROMPT: {prompt}\"");
-
-            ChatRequest cr = new OpenAI.ChatRequest();
-            cr.messages.Add(new ChatRequestMessage());
-            cr.messages[0].content = $"{prompt}";
-            string answer = openAiAPI.Chat(cr).Result.choices[0].message.content;
-
-            if (displayAnswer)
-            {
-                //Console.ForegroundColor = ConsoleColor.Yellow;
-                //Console.Write("\nAnswer: ");
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"\n{answer}");
-
-                if (!string.IsNullOrEmpty(profileText))
-                {
-                    DisplayMessage(profileText);
-                }
-            }
-
-            return answer;
-        }
-
-        public static async void DeleteItem(string collectionName, string id)
-        {
-            DataStax.API dsAPI = new DataStax.API();
-            await dsAPI.DeleteItemAsync(collectionName, id);
-        }
-
-        public static string GetDataSource(string question)
-        {
-            OpenAI.API openAiAPI = new OpenAI.API();
-            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. WEATHER: provides detailed data for questions related to the weather or temperature. STOCK: provides data about stock prices or market conditions. \r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If not of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
-            string answer = CallGPT(prompt);
-            return answer;
-        }
-
-        public static bool GetYesNo(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write($"\n{message}: ");
-            Console.ForegroundColor = ConsoleColor.White;
-            return Console.ReadKey().KeyChar.ToString().ToLower() != "n";
-        }
-
-        public static void DisplayMessage(string message, ConsoleColor color = ConsoleColor.White)
-        {
-            Console.ForegroundColor = color;
-            Console.Write($"\n{message}\n");
-            Console.ForegroundColor = ConsoleColor.White;
-            LogIt($"\n{message}\n");
-        }
-
-        //public static FindResult Find(string collectionName, EmbeddingResult embeddingResult, int rowsToReturn)
-        //{
-        //    try
-        //    {
-        //        DataStax.API dsAPI = new DataStax.API();
-        //        FindRequest fr = new FindRequest();
-        //        fr.find.sort.vector = embeddingResult.data[0].embedding;
-        //        fr.find.options.limit = rowsToReturn;
-        //        FindResult fres = dsAPI.FindAsync(collectionName, fr).Result;
-        //        double similarity = fres.data.documents[0].similarity;
-        //        return fres;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return null;
-        //    }
-        //}
-
-        //public static EmbeddingResult GetEmbedding(string text)
-        //{
-        //    // Setup
-        //    // ---------------------------------------------------------------
-        //    // DataStax is used for the vector store, so need to get access
-        //    // to its API and define a variable to hold the query response.
-        //    DataStax.API dsAPI = new DataStax.API();
-        //    OpenAI.EmbeddingResult embeddingResult = new OpenAI.EmbeddingResult();
-        //    // ---------------------------------------------------------------
-        //    // OpenAI is used to generate the natural language responses to 
-        //    // the user's questions, so need to get access to the API.
-        //    OpenAI.API openAiAPI = new OpenAI.API();
-        //    // ---------------------------------------------------------------
-
-        //    // Get vector for the question we want to ask
-        //    embeddingResult = openAiAPI.EmbedAsync(text).Result;
-        //    return embeddingResult;
-        //}
     }
 }

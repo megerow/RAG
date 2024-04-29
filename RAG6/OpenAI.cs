@@ -8,6 +8,9 @@ using Newtonsoft.Json;
 
 namespace RAG.OpenAI
 {
+    /// <summary>
+    /// Methods in this class are used to work with the OpenAI API.
+    /// </summary>
     public class API
     {
         // If empty constructor is used then the input text
@@ -20,48 +23,70 @@ namespace RAG.OpenAI
             this.text = text;
         }
 
-        // Url to the OpenAI embedding service
+        /// <summary>
+        /// Url to the OpenAI embedding service
+        /// </summary>
         public string embeddingsUrl { get; } = "https://api.openai.com/v1/embeddings";
 
-        // The embedding model to use
+        /// <summary>
+        /// The embedding model to use
+        /// </summary>
         public string model { get; } = "text-embedding-ada-002";
 
-        // Text to convert to an embedding
+        /// <summary>
+        /// Text to convert to an embedding
+        /// </summary>
         public string text { get; set; } = "";
 
-        // Holds JSON string returned from API
+        /// <summary>
+        /// Holds JSON string returned from API
+        /// </summary>
         private string _toString { get; set; } = "";
         
-        // Override the native ToString method to return JSON of response
+        /// <summary>
+        /// Override the native ToString method to return JSON of response
+        /// </summary>
+        /// <returns></returns>
         public override string ToString() { return _toString; }
 
-        // Object to hold the response from OpenAI API
+        /// <summary>
+        /// Object to hold the response from OpenAI API
+        /// </summary>
         public EmbeddingResult Result { get; set; }
 
+        /// <summary>
+        /// Call ChatGPT and get the response.
+        /// </summary>
+        /// <param name="cr">Structure containing the chat request</param>
+        /// <returns>Structure containing the chat response</returns>
         public async Task<ChatResponse> Chat(ChatRequest cr)
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
             request.Headers.Add("Accept", "application/json");
             request.Headers.Add("Authorization", "Bearer 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");
-           // request.Headers.Add("Cookie", "__cf_bm=YBscyoX0CDVPiKUubXMM9Y5ntwYm0iNZj8XtfqAuuNQ-1711129536-1.0.1.1-NR.rh7geDNIxATDkG81BOqmgT5HPrt7neqw1VzCruGC33l3aPYsMHWkuD31yqRJSDqv9RvFWltHEmQey_dN4cw; _cfuvid=mM.NfIqjutvFJHLmJivLE255VI9vr9ra15B8.nHFi7I-1710962548377-0.0.1.1-604800000");
-            //var content = new StringContent("{\n    \"model\": \"gpt-3.5-turbo\",\n    \"messages\": [\n        {\n            \"role\": \"user\",\n            \"content\": \"Answer the following question: Who can help me get stronger? using only the following data: Popeye's Muscle Supplements|Founded by the spinach-fueled Popeye himself, Popeye's Muscle Supplements is a rising star in the health and wellness industry. Despite its modest size, this company has made waves with its range of all-natural supplements designed to boost strength and endurance. With endorsements from athletes and fitness enthusiasts alike, Popeye's Muscle Supplements is gaining traction as a trusted name in the competitive world of nutritional supplements.\"\n        }\n    ],\n    \"temperature\": 0,\n    \"top_p\": 1,\n    \"n\": 1,\n    \"stream\": false,\n    \"max_tokens\": 250,\n    \"presence_penalty\": 0,\n    \"frequency_penalty\": 0\n}", null, "application/json");
-            var content = new StringContent(JsonConvert.SerializeObject(cr), null, "application/json");
+             var content = new StringContent(JsonConvert.SerializeObject(cr), null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            //Console.WriteLine(await response.Content.ReadAsStringAsync());
             ChatResponse chatResponse = JsonConvert.DeserializeObject<ChatResponse>(await response.Content.ReadAsStringAsync());
             return chatResponse;
         }
 
-        // If called without parameters, then just use the text property
+        /// <summary>
+        /// If called without parameters, then just use the text property.
+        /// </summary>
+        /// <returns>A structure containing the vectorized text</returns>
         public async Task<EmbeddingResult> EmbedAsync()
         {
             return await EmbedAsync(text);
         }
 
-        // Otherwise use the provided text
+        /// <summary>
+        /// Otherwise use the provided text.
+        /// </summary>
+        /// <param name="_text">Text to convert to a vector representation</param>
+        /// <returns>A structure containing the vectorized text</returns>
         public async Task<EmbeddingResult> EmbedAsync(string _text) 
         {
             // Define HTTP client to call OpenAI embeddings API
@@ -88,7 +113,7 @@ namespace RAG.OpenAI
         }
     }
 
-    // -- CHAT REQUEST
+    // Classes used by OpenAI API chat request.
 
     public class ChatRequestMessage
     {
@@ -99,7 +124,6 @@ namespace RAG.OpenAI
     public class ChatRequest
     {
         public string model { get; set; } = "gpt-3.5-turbo";
-        //public string model { get; set; } = "gpt-4-turbo-preview";
         public List<ChatRequestMessage> messages { get; set; } = new List<ChatRequestMessage>();
         public double temperature { get; set; } = 0.0;
         public int top_p { get; set; } = 1;
@@ -110,7 +134,7 @@ namespace RAG.OpenAI
         public int frequency_penalty { get; set; } = 0;
     }
 
-    // -- CHAT RESPONSE
+    // Classes used by OpenAI API chat response.
 
     public class Choice
     {
@@ -144,7 +168,7 @@ namespace RAG.OpenAI
         public int total_tokens { get; set; }
     }
 
-    // -- EMBED
+    // Classes used by OpenAI API Embedding service.
 
     public class Datum
     {

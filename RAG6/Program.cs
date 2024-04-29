@@ -1,18 +1,8 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿// Main routine for RAG6 prototype. Essentially just keeps asking seeker if they
+// have a question, determines the appropriate data source to answer the question,
+// gets the answer, and then repeats until the seeker presses [Enter] without
+// providing a question.
 using RAG6;
-
-//// Unix timestamp
-//long unixTimestamp = 1713582000;
-
-//// Convert Unix timestamp to DateTimeOffset
-//DateTimeOffset dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp);
-
-//// Convert DateTimeOffset to DateTime
-//DateTime dateTime = dateTimeOffset.DateTime;
-
-//// Display the DateTime value
-//Console.WriteLine("Unix Timestamp: " + unixTimestamp);
-//Console.WriteLine("DateTime: " + dateTime.ToString());
 
 string? question = "";
 string prompt = "";
@@ -20,14 +10,6 @@ int qNum = 1;
 string answer = "";
 string sql = "";
 string dataSource = "";
-
-//Utilities.QueryWeather("what is the weather in Menlo Park?");
-
-//Console.WriteLine();
-//Console.WriteLine("Press any key to continue...");
-//Console.Read();
-
-//return;
 
 // Loop, prompting user to ask a question
 while (true)

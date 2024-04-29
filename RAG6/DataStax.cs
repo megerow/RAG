@@ -2,8 +2,16 @@
 
 namespace RAG.DataStax
 {
+    /// <summary>
+    /// Methods for working with the DataStax vector database.
+    /// </summary>
     internal class API
     {
+        /// <summary>
+        /// Create a new DataStax vector database collection.
+        /// </summary>
+        /// <param name="collectionName">Name of collection</param>
+        /// <returns></returns>
         public async Task CreateCollectionAsync(string  collectionName)
         {
             var client = new HttpClient();
@@ -16,6 +24,12 @@ namespace RAG.DataStax
             RAG6.Utilities.DisplayMessage(await response.Content.ReadAsStringAsync());
         }
 
+        /// <summary>
+        /// Delete an item in a collection.
+        /// </summary>
+        /// <param name="collectionName">Name of collection</param>
+        /// <param name="id">Unique ID of item to delete</param>
+        /// <returns></returns>
         public async Task DeleteItemAsync(string collectionName, string id)
         {
             var client = new HttpClient();
@@ -27,6 +41,12 @@ namespace RAG.DataStax
             response.EnsureSuccessStatusCode();
         }
 
+        /// <summary>
+        /// Find match(es) in a collection.
+        /// </summary>
+        /// <param name="collectionName">Name of collection</param>
+        /// <param name="findRequest">Structure specifying search criteria</param>
+        /// <returns>Structure containing search results</returns>
         public async Task<FindResult> FindAsync(string collectionName, FindRequest findRequest)
         {
             string findJson = JsonConvert.SerializeObject(findRequest);
@@ -49,12 +69,20 @@ namespace RAG.DataStax
             return null;
         }
 
+        /// <summary>
+        /// Add a new item or update an existing item to/in a collection.
+        /// </summary>
+        /// <param name="collectionName">Name of collection</param>
+        /// <param name="id">Unique ID of item to be updated</param>
+        /// <param name="name">Name of item</param>
+        /// <param name="docType">Doc type of item</param>
+        /// <param name="vector">Vector representation of item</param>
+        /// <returns></returns>
         public async Task WriteAsync(string collectionName, string id, string name, string docType, List<double> vector)
         {
             Document document = new Document(id, name, docType, vector);
 
             string docJson = JsonConvert.SerializeObject(document);
-
 
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://953ccde9-fa5a-4634-a3a9-31d41d3bfb33-us-east1.apps.astra.datastax.com/api/json/v1/default_keyspace/" + collectionName);
@@ -65,6 +93,12 @@ namespace RAG.DataStax
             response.EnsureSuccessStatusCode();
         }
 
+        /// <summary>
+        /// Add multiple documents to a collection at once.
+        /// </summary>
+        /// <param name="collectionName">Name of collection</param>
+        /// <param name="documents">Collection of documents to add</param>
+        /// <returns></returns>
         public async Task WriteAsync(string collectionName, Documents documents)
         {
             string customersJson = JsonConvert.SerializeObject(documents);
@@ -75,11 +109,10 @@ namespace RAG.DataStax
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            //RAG2.Utilities.DisplayMessage(await response.Content.ReadAsStringAsync());
         }
     }
 
-    // -- INSERT ONE
+    // Classes used to work with DataStax vector store when adding or updating a single item.
 
     public class InsertOne
     {
@@ -111,7 +144,7 @@ namespace RAG.DataStax
         }
     }
 
-    // -- INSERT MANY
+    // Classes used to work with DataStax vector store when adding or updating multiple items at once.
 
     public class InsertMany
     {
@@ -129,7 +162,7 @@ namespace RAG.DataStax
         public InsertMany insertMany { get; set; } = new InsertMany();
     }
 
-    // -- FIND REQUEST
+    // Classes used when searching the DataStax vector store.
 
     public class FindRequestBody
     {
@@ -154,7 +187,7 @@ namespace RAG.DataStax
         public List<double> vector { get; set; } = new List<double>();
     }
 
-    // -- FIND RESULT
+    // Classes used to unpack the DataStax find results.
 
     public class FoundData
     {
