@@ -5,6 +5,8 @@ using RAG.OpenAI;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using Newtonsoft.Json;
+using System.Diagnostics.SymbolStore;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace RAG6
 {
@@ -273,6 +275,82 @@ namespace RAG6
             }
         }
 
+        public class Symbol
+        {
+            public string currency { get; set; }
+            public string description { get; set; }
+            public string displaySymbol { get; set; }
+            public string figi { get; set; }
+            public object isin { get; set; }
+            public string mic { get; set; }
+            public string shareClassFIGI { get; set; }
+            public string symbol { get; set; }
+            public string symbol2 { get; set; }
+            public string type { get; set; }
+        }
+
+        public static List<Symbol> symbols { get; set; } = null;
+
+        public class Quote
+        {
+            public double c { get; set; }
+            public double CurrentPrice { get{ return c; } }
+            public double d { get; set; }
+            public double Change { get { return d; } }
+            public double dp { get; set; }
+            public double PercentChange { get { return dp; } }
+            public double h { get; set; }
+            public double High { get { return h; } }
+            public double l { get; set; }
+            public double Low { get { return l; } }
+            public double o { get; set; }
+            public double Open { get { return o; } }
+            public double pc { get; set; }
+            public double PreviousClose { get { return pc; } }
+            public int t { get; set; }
+        }
+
+        public static void QueryStock(string question)
+        {
+            try
+            {
+                // Make sure the list of stock symbols is in memory, and if not load it.
+                if (symbols == null)
+                {
+                    string json = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG6\\Symbol.json");
+                    symbols = JsonConvert.DeserializeObject<List<Symbol>>(json);
+                }
+
+                // 2. Extract the name or symble from the question.
+                string prompt = $"Extract the company name in the following question: {question}. Answer should just be the company name and its stock ticker symbol with no other text. The format should be: Company:Symbol. If you cannot determine the ticker symbol answer \"Unknown\".";
+
+                // #2: Call GPT to get the answer
+                string company = CallGPT(prompt);
+
+                // 3. Search the symbols list for the name or symbol to use.
+                string symbol = company.Split(':')[1];
+
+                // 4. Call the FinnHub API to get it's current information
+                var client = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Get, $"https://finnhub.io/api/v1/quote?symbol={symbol}&token=conuvo9r01qm6hd181fgconuvo9r01qm6hd181g0");
+                var response = client.SendAsync(request).Result;
+                response.EnsureSuccessStatusCode();
+
+                Quote quote = JsonConvert.DeserializeObject<Quote>(response.Content.ReadAsStringAsync().Result);
+
+                // 5. Call ChatGPT to answer the question
+                prompt = $"Answer the question: {question}, using only the following data: {JsonConvert.SerializeObject(quote)}. Display amounts in dollar format.";
+
+                string answer = CallGPT(prompt);
+
+                DisplayMessage(answer, ConsoleColor.Cyan);
+
+            } catch (Exception ex)
+            {
+                DisplayMessage($"Oops! An error occurred. {ex.Message}", ConsoleColor.Cyan);
+            }
+        }
+
         public static void QueryWeather(string question)
         {
             string prompt = "";
@@ -524,7 +602,7 @@ namespace RAG6
         public static string GetDataSource(string question)
         {
             OpenAI.API openAiAPI = new OpenAI.API();
-            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. WEATHER: provides detailed data for questions related to the weather or temperature.\r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If not of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
+            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. WEATHER: provides detailed data for questions related to the weather or temperature. STOCK: provides data about stock prices or market conditions. \r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If not of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
             string answer = CallGPT(prompt);
             return answer;
         }

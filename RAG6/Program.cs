@@ -63,7 +63,11 @@ while (true)
 
             case "WEATHER":
                 Utilities.QueryWeather(question);
-                break;  
+                break;
+
+            case "STOCK":
+                Utilities.QueryStock(question);
+                break; 
 
             default:
                 //Utilities.QueryVector(question);
