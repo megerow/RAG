@@ -494,7 +494,7 @@ namespace RAG6
             {
                 // #1: Get the SQL to query the database
 
-                prompt = $"Be sure to use correct Microsoft SQL Server syntax. You are a Microsoft SQL Server database developer.You have a Microsoft SQL Server database view named vwORDERS with the following structure:Date datetime, Quantity int, Product varchar(50), Price money, Customer varchar(50), SalesRep varchar(50), Amount money. Provide just the valid Microsoft SQL Server TSQL SELECT statement to answer the following question: {question}.";
+                prompt = $"Be sure to use correct Microsoft SQL Server syntax. You are a Microsoft SQL Server database developer.You have a Microsoft SQL Server database view named vwORDERS with the following structure:Date datetime, Quantity int, Product varchar(50), Price money, Customer varchar(50), SalesRep varchar(50), Amount money. Provide just the valid Microsoft SQL Server TSQL SELECT statement to answer the following question: {question}. For units sold use whole integers with commas between thousands. For amount sold use currency format.";
 
                 // Call GPT to get the answer
                 sql = CallGPT(prompt);
@@ -502,7 +502,7 @@ namespace RAG6
                 // In case GPT added ``` characters to format SQL as code, remove them
                 sql = FixUp(sql);
 
-                DisplayMessage($"{sql}", ConsoleColor.Gray);
+                //DisplayMessage($"{sql}", ConsoleColor.Gray);
 
                 // #2: Query the database and construct the prompt
                 prompt = $"You are an AI chatbot. Answer the question: \"{question}\" using the following data: ";
@@ -524,12 +524,13 @@ namespace RAG6
                         prompt += "\n";
                         foreach (DataColumn col in dataTable.Columns)
                         {
-                            prompt += $"{col.ColumnName}: {row[col.ColumnName]},";
+                            prompt += $"{col.ColumnName}: {row[col.ColumnName]}";
+                            if (col.ColumnName != dataTable.Columns[dataTable.Columns.Count - 1].ColumnName) prompt += ", ";
                         }
                     }
                 }
 
-                answer = CallGPT(prompt, null, false, true);
+                answer = CallGPT(prompt, null, false, false);
 
                 // Display the answer
                 DisplayMessage($"{answer}", ConsoleColor.Cyan);
