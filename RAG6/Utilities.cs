@@ -15,12 +15,16 @@ using System.Data;
 using Newtonsoft.Json;
 using System.Diagnostics.SymbolStore;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Configuration;
+using Microsoft.Extensions.Configuration;
 
 namespace RAG6
 {
     public class Utilities
     {
-        public static string logFilePath = $"c:\\temp\\RAG-{DateTime.Now.Year}-{DateTime.Now.Month}-{DateTime.Now.Day}.txt";
+        static IConfiguration config = new ConfigurationBuilder().AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"), optional: true, reloadOnChange: true).Build();
+
+        public static string logFilePath = string.Format(config["AppSettings:logFilePath"], DateTime.Now.Year, DateTime.Now.Month,DateTime.Now.Day);
 
         /// <summary>
         /// OBSOLETE: Add an intent to the DocType collection in the vector database.
@@ -387,7 +391,8 @@ namespace RAG6
 
                 // #2: Query the database and construct the prompt
                 prompt = $"You are an AI chatbot. Answer the question: \"{question}\" using the following data: ";
-                using (SqlConnection con = new SqlConnection("Server=tcp:megerow.database.windows.net,1433;Initial Catalog=RAG;Persist Security Info=False;User ID=megerow;Password=Zippy2024;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"))
+
+                using (SqlConnection con = new SqlConnection(config["AppSettings:sqlConnectionString"]))
                 {
                     SqlDataAdapter da = new SqlDataAdapter(sql, con);
                     DataTable dataTable = new DataTable();
@@ -432,12 +437,12 @@ namespace RAG6
         {
             try
             {
-                // Make sure the list of stock symbols is in memory, and if not load it.
-                if (symbols == null)
-                {
-                    string json = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG6\\Symbol.json");
-                    symbols = JsonConvert.DeserializeObject<List<Symbol>>(json);
-                }
+                //// Make sure the list of stock symbols is in memory, and if not load it.
+                //if (symbols == null)
+                //{
+                //    string json = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG6\\Symbol.json");
+                //    symbols = JsonConvert.DeserializeObject<List<Symbol>>(json);
+                //}
 
                 // 2. Extract the name or symble from the question.
                 string prompt = $"Extract the company name in the following question: {question}. Answer should just be the company name and its stock ticker symbol with no other text. The format should be: Company:Symbol. If you cannot determine the ticker symbol answer \"Unknown\".";
@@ -450,7 +455,8 @@ namespace RAG6
 
                 // 4. Call the FinnHub API to get it's current information
                 var client = new HttpClient();
-                var request = new HttpRequestMessage(HttpMethod.Get, $"https://finnhub.io/api/v1/quote?symbol={symbol}&token=conuvo9r01qm6hd181fgconuvo9r01qm6hd181g0");
+                string token = config["AppSettings:finnHubToken"];
+                var request = new HttpRequestMessage(HttpMethod.Get, $"https://finnhub.io/api/v1/quote?symbol={symbol}&token={token}");
                 var response = client.SendAsync(request).Result;
                 response.EnsureSuccessStatusCode();
 
@@ -567,7 +573,8 @@ namespace RAG6
 
                 // #3: Now use the OpenWeatherMaps API to get the lat/long for the city and state
                 var client = new HttpClient();
-                var request = new HttpRequestMessage(HttpMethod.Get, $"http://api.openweathermap.org/geo/1.0/direct?q={city},{state},{country}&appid=d87f3cd5eec403ef0737c3b4131709a9");
+                string token = config["AppSettings:openWeatherMapToken"];
+                var request = new HttpRequestMessage(HttpMethod.Get, $"http://api.openweathermap.org/geo/1.0/direct?q={city},{state},{country}&appid={token}");
                 var response = client.Send(request);
                 response.EnsureSuccessStatusCode();
                 Geo[] geo = JsonConvert.DeserializeObject<Geo[]>(response.Content.ReadAsStringAsync().Result);

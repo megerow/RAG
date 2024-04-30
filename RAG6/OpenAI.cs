@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace RAG.OpenAI
 {
@@ -23,6 +24,8 @@ namespace RAG.OpenAI
         // If empty constructor is used then the input text
         // must be set separately before the EmbedAsync method is called
         public API() { }
+
+        static IConfiguration config = new ConfigurationBuilder().AddJsonFile(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"), optional: true, reloadOnChange: true).Build();
 
         // Prefill the input text
         public API(string text)
@@ -44,6 +47,8 @@ namespace RAG.OpenAI
         /// Text to convert to an embedding
         /// </summary>
         public string text { get; set; } = "";
+
+        private string token = config["AppSettings:openAIToken"];
 
         /// <summary>
         /// Holds JSON string returned from API
@@ -71,8 +76,8 @@ namespace RAG.OpenAI
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
             request.Headers.Add("Accept", "application/json");
-            request.Headers.Add("Authorization", "Bearer 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");
-             var content = new StringContent(JsonConvert.SerializeObject(cr), null, "application/json");
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            var content = new StringContent(JsonConvert.SerializeObject(cr), null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
@@ -99,7 +104,7 @@ namespace RAG.OpenAI
             // Define HTTP client to call OpenAI embeddings API
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, embeddingsUrl);
-            request.Headers.Add("Authorization", "Bearer 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");
+            request.Headers.Add("Authorization", $"Bearer {token}");
 
             // Set the model and the contents
             var content = new StringContent("{\"model\": \"" + model + "\",\"input\": \"" + _text + "\"}", null, "application/json");
