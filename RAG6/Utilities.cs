@@ -247,7 +247,7 @@ namespace RAG6
         public static string GetDataSource(string question)
         {
             OpenAI.API openAiAPI = new OpenAI.API();
-            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1.  VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. WEATHER: provides detailed data for questions related to the weather or temperature. STOCK: provides data about stock prices or market conditions. \r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If not of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
+            string prompt = $"You are an AI chatbot with access to the following data sources:\r\n\r\n1. VECTOR: contains documents that profile customers, products, and sales reps and can be used to answer non-numerical questions about customers, products and sales reps.\r\n2. SQL: contains detailed data on orders placed by customers for products and which sales reps were involved and should be used when counting or summing data. 3. WEATHER: provides detailed data for questions related to the weather or temperature. 4. STOCK: provides data about stock prices or market conditions. \r\n\r\nWhich data source would you use to answer the following question: {question}. Only provide the one-word name of the data source. If none of these sources seem to fit, reply \"OTHER\".\r\n\r\n";
             string answer = CallGPT(prompt);
             return answer;
         }
@@ -437,20 +437,13 @@ namespace RAG6
         {
             try
             {
-                //// Make sure the list of stock symbols is in memory, and if not load it.
-                //if (symbols == null)
-                //{
-                //    string json = File.ReadAllText("C:\\Users\\meger\\source\\repos\\RAG\\RAG6\\Symbol.json");
-                //    symbols = JsonConvert.DeserializeObject<List<Symbol>>(json);
-                //}
-
                 // 2. Extract the name or symble from the question.
                 string prompt = $"Extract the company name in the following question: {question}. Answer should just be the company name and its stock ticker symbol with no other text. The format should be: Company:Symbol. If you cannot determine the ticker symbol answer \"Unknown\".";
 
                 // #2: Call GPT to get the answer
                 string company = CallGPT(prompt);
 
-                // 3. Search the symbols list for the name or symbol to use.
+                // 3. Extract the symbol portion of GPT answer
                 string symbol = company.Split(':')[1];
 
                 // 4. Call the FinnHub API to get it's current information
@@ -561,15 +554,13 @@ namespace RAG6
             {
                 // #1: Get the city and state specified by the end user
 
-                prompt = $"Extract the city and state in the united states for the following question: {question}. Answer should be in format: City;State. The state should be in 2-character form. If you can determine the city, but not the state, use \"CA\" for the state. If you cannot determine neither the city or state answer \"Unknown\".";
+                prompt = $"Extract the city and state in the united states for the following question: {question}. Answer should be in format: City;State. The state should be in 2-character form. If you can determine the city, but not the state, use \"CA\" for the state. If you cannot determine either the city or state answer \"Unknown\".";
 
                 // #2: Call GPT to get the answer
                 loc = CallGPT(prompt);
                 string city = loc.Split(';').First();
                 string state = loc.Split(';').Last();
                 string country = "usa";
-
-                //DisplayMessage($"{loc}", ConsoleColor.Gray);
 
                 // #3: Now use the OpenWeatherMaps API to get the lat/long for the city and state
                 var client = new HttpClient();
@@ -579,19 +570,15 @@ namespace RAG6
                 response.EnsureSuccessStatusCode();
                 Geo[] geo = JsonConvert.DeserializeObject<Geo[]>(response.Content.ReadAsStringAsync().Result);
 
-                //DisplayMessage($"Latitude: {geo.First().lat}, Longitude: {geo.First().lon}", ConsoleColor.Gray);
-
                 // #4: Use the latitude/longitude to get the current weather
                 client = new HttpClient();
-                request = new HttpRequestMessage(HttpMethod.Get, $"https://api.openweathermap.org/data/2.5/weather?lat={geo.First().lat}&lon={geo.First().lon}&appid=d87f3cd5eec403ef0737c3b4131709a9&units=imperial");
+                request = new HttpRequestMessage(HttpMethod.Get, $"https://api.openweathermap.org/data/2.5/weather?lat={geo.First().lat}&lon={geo.First().lon}&appid={token}&units=imperial");
                 response = client.Send(request);
                 response.EnsureSuccessStatusCode();
                 string json = response.Content.ReadAsStringAsync().Result;
                 WeatherRoot weather = JsonConvert.DeserializeObject<WeatherRoot>(json);
 
                 string data = $"The weather in {city}, {state} is: {weather.weather.First().description}, Temperature: {weather.main.feels_like} degrees Fahrenheit, Wind speed: {weather.wind.speed} MPH";
-
-                //DisplayMessage(data, ConsoleColor.Gray);
 
                 // #5: Call ChatGPT with the data to answer the question.
                 prompt = $"Answer the question: {question}, using only the following data: {data}.";

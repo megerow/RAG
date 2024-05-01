@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Symbol.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="bin\Debug\net8.0\appSettings.json" />
   </ItemGroup>
 
