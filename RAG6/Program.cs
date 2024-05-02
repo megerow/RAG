@@ -30,34 +30,41 @@ while (true)
     // If blank entered, then exit program
     if (!string.IsNullOrEmpty(question))
     {
-        // Get the data source
-        dataSource = Utilities.GetDataSource(question);
-
-        // Display the answer
-        Utilities.DisplayMessage($"The {dataSource} data source will be used.");
-
-        switch (dataSource.ToUpper())
+        try
         {
-            case "SQL":
-                Utilities.QuerySQL(question);
-                break;
+            // Get the data source
+            dataSource = Utilities.GetDataSource(question);
 
-            case "VECTOR":
-                Utilities.QueryVector(question);
-                break;
+            // Display the answer
+            Utilities.DisplayMessage($"The {dataSource} data source will be used.");
 
-            case "WEATHER":
-                Utilities.QueryWeather(question);
-                break;
+            switch (dataSource.ToUpper())
+            {
+                case "SQL":
+                    Utilities.QuerySQL(question);
+                    break;
 
-            case "STOCK":
-                Utilities.QueryStock(question);
-                break; 
+                case "VECTOR":
+                    Utilities.QueryVector(question);
+                    break;
 
-            default:
-                //Utilities.QueryVector(question);
-                Utilities.CallGPT(question, null, true);
-                break;
+                case "WEATHER":
+                    Utilities.QueryWeather(question);
+                    break;
+
+                case "STOCK":
+                    Utilities.QueryStock(question);
+                    break;
+
+                default:
+                    Utilities.CallGPT(question, null, true);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // If an exception occurs, just ask GPT
+            Utilities.CallGPT(question, null, true);
         }
 
         qNum++;
