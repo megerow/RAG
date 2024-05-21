@@ -29,7 +29,7 @@ flowchart TD
     nu --> nr
     style ng stroke:#00C853,fill:#C8E6C9
     style na stroke:#D50000,fill:#FFCDD2
-    style nc stroke:#2962FF,fill:#BBDEFB
+    style nc stroke:#2962FF,fill:#000000
     style n5 stroke:#2962FF,fill:#BBDEFB
     style ni stroke:#2962FF,fill:#BBDEFB
     style nl stroke:#2962FF,fill:#BBDEFB
