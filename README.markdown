@@ -1,19 +1,38 @@
 ```mermaid
 flowchart TD
-    1(["1. Seeker asks <br>a question <span style="color: red; font-style: bold;">Q</span>"]) --> 2("2. Question <span style="color: red; font-style: bold;">Q</span> is <br>converted to embedding")
-    2 --> 3[("3. Search vector database for <br>most appropriate data source: <span style="color: red; font-style: bold;">DS</span>, <br>to answer question: <span style="color: red; font-style: bold;">Q</span>")]
-    3 --> 4{"4. Confidence of found<br> data source <span style="color: red; font-style: bold;">DS</span>, <br>greater than minimum <br>level"}
-    4 -- Yes --> 4a[("5. Search data source  <span style="color: red; font-style: bold;">DS</span> in <br>vector database for data <span style="color: red; font-style: bold;">D</span>")]
-    4 -- No --> 5a("9. Construct prompt using <br>seeker's question <span style="color: red; font-style: bold;">Q</span>")
-    4a --> 4b{"6. Confidence of <br>found data  <span style="color: red; font-style: bold;">D</span><br>  greater than minimum <br>level"}
-    4b -- Yes --> 4bi("7. Construct prompt using seeker's <br>question <span style="color: red; font-style: bold;">Q</span> and found data <span style="color: red; font-style: bold;">D</span>")
-    4bi --> 4bii["10. Call ChatGPT API using prompt"]
-    4bii --> 4biii("11. Display answer to seeker")
-    4b -- No --> 4ci("8. Construct prompt using seeker's <br>question <span style="color: red; font-style: bold;">Q</span> and found data source <span style="color: red; font-style: bold;">DS</span>")
-    4ci --> 4bii
-    5a --> 4bii
-    style 1 stroke:#00C853,fill:#C8E6C9
-    style 4 fill:#FFF9C4
-    style 4b stroke-width:1px,stroke-dasharray: 0,fill:#FFF9C4
-    style 4biii stroke:#D50000,fill:#FFCDD2
+    ng(["1. Prompt seeker to<br> ask a question"]) --> nz{"2. Did the seeker <br>ask a question?"}
+    nz -- Yes, Seeker entered<br> a question --> nb{"3. Call GPT to classify<br>question by<br>data source"}
+    nd[/"4. Call GPT to convert <br>question into a valid <br>SQL SELECT statement"/] -- SQL returned --> n3[("5. Query SQL <br>database for results")]
+    n3 -- Data returned --> nf("6. Construct GPT prompt<br> using original question and <br>query results from database")
+    nf --> nr[/"7. Call ChatGPT to get<br>the final answer<br> using prompt"/]
+    nr --> nk[/"8. Display answer<br> from GPT"/]
+    nk --> ng
+    nz -- No, <br>Seeker pressed [Enter]<br> without a question --> na(["14. Exit program"])
+    nb -- SQL<br>(Structured) --> nd
+    nb -- Vector<br>(Unstructured) --> n8["9. Calculate question <br>embedding"]
+    n8 --> nj["10. Search vector<br>database for<br>matching documents"]
+    nj --> n6{"11. Matches found<br>and confidence<br>level &gt;= minimum?"}
+    n6 -- Yes --> nq("12. Construct prompt<br>with found docs")
+    n6 -- No --> ns("13. Prompt using <br>only question")
+    nq --> nr
+    ns --> nr
+    nb -- Weather<br>related --> nc[/"15. Call GPT to extract<br>city and state<br>from question"/]
+    nb -- Stock<br>related --> n5[/"19. Call GPT to extract<br>company name<br>and lookup ticker symbol"/]
+    nc --> ni[/"16. Call OpenWeatherMap API <br>to get the latitude and<br> longitude of the specified<br> city and state"/]
+    ni --> nl[/"17. Call OpenWeatherMap API<br>to get the current weather<br>for the specified<br>latitude and longitude"/]
+    n5 --> no[/"20. Call the FinnHub API to<br>return the stock quote"/]
+    nl --> n2("18. Construct prompt using data<br>from OpenWeatherMap<br>service")
+    n2 --> nr
+    no --> nu("21. Construct prompt using<br>data from FinnHub<br>stock quote service")
+    nu --> nr
+    style ng stroke:#00C853,fill:#C8E6C9
+    style na stroke:#D50000,fill:#FFCDD2
+    style nc stroke:#2962FF,fill:#BBDEFB
+    style n5 stroke:#2962FF,fill:#BBDEFB
+    style ni stroke:#2962FF,fill:#BBDEFB
+    style nl stroke:#2962FF,fill:#BBDEFB
+    style no stroke:#2962FF,fill:#BBDEFB
+    style n2 stroke:#2962FF,fill:#BBDEFB
+    style nu stroke:#2962FF,fill:#BBDEFB
+
 ```
