@@ -1,3 +1,5 @@
+The following flowchart depicts the logic used by the RAG8 project to process seeker questions and display answers using OpenAI GPT 3.5.  This project is for demonstration purposes only.
+
 ```mermaid
 flowchart TD
     ng(["1. Prompt seeker to<br> ask a question"]) --> nz{"2. Did the seeker <br>ask a question?"}
