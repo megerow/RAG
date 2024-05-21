@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/RAG/RAG.Loader.csproj
+/RAG2/RAG2.csproj
+/RAG3/RAG3.csproj
+/RAG4/RAG4.csproj
+/RAG6/RAG6.csproj
+/RAG7/RAG7.csproj
+/RAG8/appSettings.json
