@@ -9,7 +9,7 @@ flowchart TD
     nf --> nr[/"7. Call ChatGPT to get<br>the final answer<br> using prompt"/]
     nr --> nk[/"8. Display answer<br> from GPT"/]
     nk --> ng
-    nz -- No, <br>Seeker pressed [Enter]<br> without a question --> na(["14. Exit program"])
+    nz -- No, <br>Seeker pressed [Enter]<br> without a question --> na(["<span style='color: black'14. Exit program</span>"])
     nb -- SQL<br>(Structured) --> nd
     nb -- Vector<br>(Unstructured) --> n8["9. Calculate question <br>embedding"]
     n8 --> nj["10. Search vector<br>database for<br>matching documents"]
