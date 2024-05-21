@@ -1,1 +1,0 @@
-Product|Contains information about products and features.
