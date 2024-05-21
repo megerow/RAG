@@ -2,7 +2,7 @@ The following flowchart depicts the logic used by the RAG8 project to process se
 
 ```mermaid
 flowchart TD
-    ng(["1. Prompt seeker to<br> ask a question"]) --> nz{"2. Did the seeker <br>ask a question?"}
+    ng(["<span style='color: black'>1. Prompt seeker to<br> ask a question</span>"]) --> nz{"2. Did the seeker <br>ask a question?"}
     nz -- Yes, Seeker entered<br> a question --> nb{"3. Call GPT to classify<br>question by<br>data source"}
     nd[/"4. Call GPT to convert <br>question into a valid <br>SQL SELECT statement"/] -- SQL returned --> n3[("5. Query SQL <br>database for results")]
     n3 -- Data returned --> nf("6. Construct GPT prompt<br> using original question and <br>query results from database")
