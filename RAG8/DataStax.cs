@@ -28,7 +28,7 @@ namespace RAG.DataStax
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://953ccde9-fa5a-4634-a3a9-31d41d3bfb33-us-east1.apps.astra.datastax.com/api/json/v1/default_keyspace");
-            request.Headers.Add("Token", "AstraCS:jBqdQovblyPQlWIgBZtsGEws:aa14ebbbcd7f99d3f419f9ae56439cacd776bbc0bf20892e654a42a72a187879");
+            request.Headers.Add("Token", token);
             var content = new StringContent("{\n  \"createCollection\": {\n    \"name\": \"" + collectionName + "\",\n    \"options\" : {\n      \"vector\" : {\n        \"dimension\" : 1536,\n        \"metric\" : \"cosine\"\n      }\n    }\n  }\n}", null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
